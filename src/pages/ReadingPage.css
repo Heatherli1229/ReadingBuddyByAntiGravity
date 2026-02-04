@@ -1,0 +1,207 @@
+.reading-page {
+    padding: var(--spacing-6) 0 var(--spacing-12);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* 头部 */
+.reading-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-6);
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-gray-600);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.back-link:hover {
+    color: var(--color-primary);
+}
+
+.article-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.article-meta {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+}
+
+/* 标题 */
+.reading-titles {
+    margin-bottom: var(--spacing-6);
+}
+
+.reading-title-cn {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--color-gray-800);
+    line-height: var(--line-height-tight);
+    margin-bottom: var(--spacing-2);
+}
+
+.reading-title-en {
+    font-size: var(--font-size-lg);
+    font-weight: 400;
+    color: var(--color-gray-500);
+}
+
+/* 文章内容区 */
+.reading-content {
+    margin-bottom: var(--spacing-8);
+}
+
+.content-text {
+    font-size: var(--font-size-xl);
+    line-height: var(--line-height-reading);
+    color: var(--color-gray-700);
+    white-space: pre-wrap;
+}
+
+.vocab-word {
+    background: var(--color-vocab-highlight);
+    border-bottom: 2px solid var(--color-vocab-underline);
+    cursor: pointer;
+    padding: 0 var(--spacing-1);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.vocab-word:hover {
+    background: rgba(245, 158, 11, 0.3);
+}
+
+.vocab-word.saved {
+    background: rgba(16, 185, 129, 0.15);
+    border-bottom-color: var(--color-primary);
+}
+
+.content-tip {
+    margin-top: var(--spacing-6);
+    padding-top: var(--spacing-4);
+    border-top: 1px solid var(--color-gray-100);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+    text-align: center;
+}
+
+.vocab-demo {
+    background: var(--color-vocab-highlight);
+    border-bottom: 2px solid var(--color-vocab-underline);
+    padding: 0 var(--spacing-1);
+    border-radius: var(--radius-sm);
+}
+
+/* 404 页面 */
+.not-found {
+    text-align: center;
+    padding: var(--spacing-16) var(--spacing-4);
+}
+
+.not-found-icon {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: var(--spacing-4);
+}
+
+.not-found h2 {
+    font-size: var(--font-size-2xl);
+    color: var(--color-gray-700);
+    margin-bottom: var(--spacing-2);
+}
+
+.not-found p {
+    color: var(--color-gray-500);
+    margin-bottom: var(--spacing-6);
+}
+
+/* 生词列表区 */
+.vocab-section {
+    margin-top: var(--spacing-8);
+}
+
+.vocab-section-title {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-gray-800);
+    margin-bottom: var(--spacing-4);
+}
+
+.vocab-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+}
+
+@media (min-width: 640px) {
+    .vocab-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.vocab-card {
+    padding: var(--spacing-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+.vocab-card-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--spacing-2);
+}
+
+.vocab-card-word {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-gray-800);
+}
+
+.vocab-card-pinyin {
+    font-size: var(--font-size-base);
+    color: var(--color-primary);
+}
+
+.vocab-card-body {
+    flex: 1;
+}
+
+.vocab-card-en {
+    font-size: var(--font-size-base);
+    color: var(--color-gray-700);
+    margin-bottom: var(--spacing-1);
+}
+
+.vocab-card-cn {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+}
+
+.vocab-card-actions {
+    display: flex;
+    gap: var(--spacing-2);
+    padding-top: var(--spacing-2);
+    border-top: 1px solid var(--color-gray-100);
+}
+
+.vocab-card-actions .btn {
+    flex: 1;
+}
+
+.vocab-card-actions .saved {
+    color: var(--color-primary);
+}

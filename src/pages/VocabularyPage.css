@@ -1,0 +1,156 @@
+.vocab-page {
+    padding: var(--spacing-8) 0;
+    min-height: calc(100vh - 64px);
+}
+
+/* 头部 */
+.vocab-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    margin-bottom: var(--spacing-8);
+}
+
+@media (min-width: 640px) {
+    .vocab-header {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+}
+
+.vocab-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    flex-wrap: wrap;
+}
+
+.vocab-title {
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--color-gray-800);
+}
+
+.vocab-count-badge {
+    padding: var(--spacing-1) var(--spacing-3);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-primary);
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: var(--radius-full);
+}
+
+.vocab-header-actions {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+/* Flashcard 网格 */
+.flashcard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-8);
+    margin-bottom: var(--spacing-8);
+}
+
+@media (min-width: 640px) {
+    .flashcard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .flashcard-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-16) var(--spacing-4);
+}
+
+.empty-icon {
+    font-size: 5rem;
+    display: block;
+    margin-bottom: var(--spacing-6);
+}
+
+.empty-state h2 {
+    font-size: var(--font-size-2xl);
+    color: var(--color-gray-700);
+    margin-bottom: var(--spacing-2);
+}
+
+.empty-state p {
+    font-size: var(--font-size-base);
+    color: var(--color-gray-500);
+    margin-bottom: var(--spacing-6);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* 底部 */
+.vocab-footer {
+    text-align: center;
+    padding-top: var(--spacing-8);
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.clear-btn {
+    color: var(--color-gray-400);
+}
+
+.clear-btn:hover {
+    color: var(--color-error);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* 练习模式 */
+.practice-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: var(--spacing-4);
+}
+
+.practice-header {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-8);
+}
+
+.practice-progress {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--color-gray-600);
+}
+
+.practice-card-container {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: var(--spacing-8);
+}
+
+.practice-actions {
+    display: flex;
+    gap: var(--spacing-4);
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: var(--spacing-6);
+}
+
+.practice-actions .btn {
+    flex: 1;
+}
+
+.practice-tip {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+}
