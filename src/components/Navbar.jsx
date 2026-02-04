@@ -31,6 +31,13 @@ function Navbar() {
                             <span className="vocab-count">{wordCount}</span>
                         )}
                     </Link>
+                    <Link
+                        to="/teacher"
+                        className={`navbar-link ${location.pathname === '/teacher' ? 'active' : ''}`}
+                    >
+                        <span className="teacher-icon">👨‍🏫</span>
+                        <span>老师入口</span>
+                    </Link>
                 </div>
             </div>
         </nav>
