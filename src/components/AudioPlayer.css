@@ -1,0 +1,109 @@
+.audio-player {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+    padding: var(--spacing-4) var(--spacing-6);
+    background: var(--gradient-soft);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--spacing-6);
+}
+
+@media (min-width: 768px) {
+    .audio-player {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+}
+
+.audio-player.loading {
+    justify-content: center;
+    padding: var(--spacing-6);
+}
+
+.loading-text {
+    color: var(--color-gray-500);
+    font-size: var(--font-size-sm);
+}
+
+.player-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.play-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 1.5rem;
+    background: var(--gradient-primary);
+    color: var(--color-white);
+    box-shadow: var(--shadow-md);
+}
+
+.play-btn:hover {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.stop-btn {
+    font-size: 1.25rem;
+}
+
+.stop-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.player-status {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-600);
+}
+
+.status-playing {
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.status-paused {
+    color: var(--color-warning);
+    font-weight: 500;
+}
+
+.rate-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.rate-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+}
+
+.rate-buttons {
+    display: flex;
+    gap: var(--spacing-1);
+}
+
+.rate-btn {
+    padding: var(--spacing-1) var(--spacing-3);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-gray-600);
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.rate-btn:hover {
+    border-color: var(--color-gray-300);
+}
+
+.rate-btn.active {
+    background: var(--color-primary);
+    color: var(--color-white);
+    border-color: var(--color-primary);
+}

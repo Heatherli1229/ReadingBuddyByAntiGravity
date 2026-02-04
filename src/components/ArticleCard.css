@@ -1,0 +1,74 @@
+.article-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+    height: 100%;
+}
+
+.article-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+}
+
+.article-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    font-size: var(--font-size-sm);
+    color: var(--color-gray-500);
+}
+
+.article-chars {
+    font-weight: 500;
+}
+
+.article-time {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.article-title-cn {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-gray-800);
+    line-height: var(--line-height-tight);
+    margin-top: var(--spacing-2);
+}
+
+.article-title-en {
+    font-size: var(--font-size-base);
+    font-weight: 400;
+    color: var(--color-gray-500);
+    margin-top: var(--spacing-1);
+}
+
+.article-summary {
+    flex: 1;
+    font-size: var(--font-size-base);
+    color: var(--color-gray-600);
+    line-height: var(--line-height-relaxed);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.article-btn {
+    margin-top: auto;
+    width: 100%;
+    text-align: center;
+}
+
+/* 悬浮效果 */
+.article-card:hover .article-title-cn {
+    color: var(--color-primary-dark);
+}
+
+.article-card:hover .article-btn {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+}

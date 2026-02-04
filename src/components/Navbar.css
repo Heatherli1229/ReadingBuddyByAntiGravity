@@ -1,0 +1,111 @@
+.navbar {
+    background: var(--color-white);
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 1px solid var(--color-gray-100);
+}
+
+.navbar-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+}
+
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    text-decoration: none;
+    transition: transform var(--transition-fast);
+}
+
+.navbar-brand:hover {
+    transform: scale(1.02);
+}
+
+.navbar-logo {
+    font-size: 1.75rem;
+    line-height: 1;
+}
+
+.navbar-title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.navbar-link {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    color: var(--color-gray-600);
+    text-decoration: none;
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-fast);
+}
+
+.navbar-link:hover {
+    background: var(--color-gray-100);
+    color: var(--color-gray-800);
+}
+
+.navbar-link.active {
+    background: var(--gradient-soft);
+    color: var(--color-primary-dark);
+}
+
+.vocab-link {
+    position: relative;
+}
+
+.vocab-icon {
+    font-size: 1.1rem;
+}
+
+.vocab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 var(--spacing-2);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-white);
+    background: var(--gradient-primary);
+    border-radius: var(--radius-full);
+    margin-left: var(--spacing-1);
+}
+
+@media (max-width: 640px) {
+    .navbar-title {
+        font-size: var(--font-size-lg);
+    }
+
+    .navbar-link span:not(.vocab-icon):not(.vocab-count) {
+        display: none;
+    }
+
+    .navbar-link {
+        padding: var(--spacing-2);
+    }
+
+    .vocab-icon {
+        font-size: 1.25rem;
+    }
+}
