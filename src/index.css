@@ -36,6 +36,7 @@
   --color-info: #3B82F6;
   
   /* 等级颜色 */
+  --color-level-entry: #8B5CF6;
   --color-level-beginner: #10B981;
   --color-level-intermediate: #F59E0B;
   --color-level-advanced: #EF4444;
@@ -294,6 +295,11 @@ img {
   letter-spacing: 0.05em;
 }
 
+.badge-entry {
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--color-level-entry);
+}
+
 .badge-beginner {
   background: rgba(16, 185, 129, 0.1);
   color: var(--color-level-beginner);
@@ -307,6 +313,27 @@ img {
 .badge-advanced {
   background: rgba(239, 68, 68, 0.1);
   color: var(--color-level-advanced);
+}
+
+/* HSK 等级显示 */
+.vocab-card-hsk {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-level-entry);
+  background: rgba(139, 92, 246, 0.08);
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  margin-top: var(--spacing-1);
+}
+
+.popup-hsk-badge {
+  font-weight: 600;
+  color: var(--color-level-entry);
+  background: rgba(139, 92, 246, 0.08);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  display: inline-block;
 }
 
 /* ========================================

@@ -10,10 +10,11 @@ function ArticleCard({ article }) {
     // 根据等级返回对应的 badge 类名
     const getLevelClass = () => {
         switch (level) {
+            case '入门级': return 'badge-entry';
             case '初级': return 'badge-beginner';
             case '中级': return 'badge-intermediate';
             case '高级': return 'badge-advanced';
-            default: return 'badge-beginner';
+            default: return 'badge-entry';
         }
     };
 

@@ -78,10 +78,11 @@ function ReadingPage() {
     // 获取等级颜色
     const getLevelClass = () => {
         switch (article.level) {
+            case '入门级': return 'badge-entry';
             case '初级': return 'badge-beginner';
             case '中级': return 'badge-intermediate';
             case '高级': return 'badge-advanced';
-            default: return 'badge-beginner';
+            default: return 'badge-entry';
         }
     };
 
@@ -141,6 +142,9 @@ function ReadingPage() {
                                 <div className="vocab-card-body">
                                     <p className="vocab-card-en">{word.en}</p>
                                     <p className="vocab-card-cn">{word.cn}</p>
+                                    {word.hskLevel && (
+                                        <p className="vocab-card-hsk">HSK {word.hskLevel} 级</p>
+                                    )}
                                 </div>
                                 <div className="vocab-card-actions">
                                     <button

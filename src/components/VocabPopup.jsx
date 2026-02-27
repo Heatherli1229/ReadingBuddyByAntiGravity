@@ -45,6 +45,12 @@ function VocabPopup({ word, onClose }) {
                         <span className="definition-label">中文</span>
                         <span className="definition-text">{word.cn}</span>
                     </div>
+                    {word.hskLevel && (
+                        <div className="popup-definition">
+                            <span className="definition-label">HSK等级</span>
+                            <span className="definition-text popup-hsk-badge">HSK {word.hskLevel} 级</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="popup-actions">

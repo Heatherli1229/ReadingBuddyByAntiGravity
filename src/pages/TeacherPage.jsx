@@ -13,7 +13,7 @@ const ADMIN_CREDENTIALS = {
 const EMPTY_ARTICLE = {
     title_cn: '',
     title_en: '',
-    level: '初级',
+    level: '入门级',
     content: '',
     vocabulary: []
 };
@@ -297,7 +297,7 @@ function TeacherPage() {
                         <div className="form-group">
                             <label className="form-label">难度等级</label>
                             <div className="level-selector">
-                                {['初级', '中级', '高级'].map(level => (
+                                {['入门级', '初级', '中级', '高级'].map(level => (
                                     <button
                                         key={level}
                                         type="button"
@@ -438,7 +438,7 @@ function TeacherPage() {
                     <div key={article.id} className="article-item card-flat">
                         <div className="article-item-info">
                             <div className="article-item-header">
-                                <span className={`badge badge-${article.level === '初级' ? 'beginner' : article.level === '中级' ? 'intermediate' : 'advanced'}`}>
+                                <span className={`badge badge-${article.level === '入门级' ? 'entry' : article.level === '初级' ? 'beginner' : article.level === '中级' ? 'intermediate' : 'advanced'}`}>
                                     {article.level}
                                 </span>
                                 <span className="article-item-meta">
