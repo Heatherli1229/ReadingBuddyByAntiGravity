@@ -26,63 +26,45 @@ export function autoDetectVocabulary(content, level) {
     const vocabulary = [];
     const addedWords = new Set();
 
-    // 用于记录文章中哪些字符已被匹配，防止交叉重叠（如 "早上下雪" 误认出 "上下"）
-    const usedChars = new Array(content.length).fill(false);
-
-    // 单字常见虚词和代词过滤表，避免满屏皆是类似 "的、了、是" 这种不必要的生词卡片
-    // 依然允许像 "雪" 这样有实质意义的单字被识别
     const STOP_WORDS = new Set(['的', '了', '和', '是', '在', '有', '我', '你', '他', '她', '它', '不', '没', '这', '那', '就', '也', '都', '要', '去', '来', '到', '说', '很', '好', '但', '出', '个', '得', '地', '与', '又', '着']);
 
-    // 将HSK词汇按长度排序（长词优先匹配，避免短词误匹配）
-    const sortedVocab = [...HSK_VOCAB_MAP.entries()].sort((a, b) => b[0].length - a[0].length);
+    // 使用正向最大匹配算法 (FMM) 进行分词，避免交叉词的误判（如 "早上下雪" 错误匹配出 "上下"）
+    let i = 0;
+    while (i < content.length) {
+        let matched = false;
+        let maxLen = Math.min(10, content.length - i); // HSK词汇最长基本不超过10
 
-    for (const [word, hskLevel] of sortedVocab) {
-        // 过滤常见的单字虚词及标点，保留实词单字（如"雪"）
-        if (word.length === 1 && STOP_WORDS.has(word)) continue;
+        for (let len = maxLen; len >= 1; len--) {
+            const substr = content.substring(i, i + len);
+            const hskLevel = HSK_VOCAB_MAP.get(substr);
 
-        // 检查该词的HSK等级是否在当前文章难度的允许范围内
-        if (!allowedLevels.has(hskLevel)) continue;
-
-        // 跳过已加入的词
-        if (addedWords.has(word)) continue;
-
-        // 在文章中查找词汇的所有出现位置
-        let pos = content.indexOf(word);
-        let foundMatch = false;
-
-        while (pos !== -1) {
-            // 检查这个词的每个字符是否已经被其他长词占用了
-            let isOverlap = false;
-            for (let i = 0; i < word.length; i++) {
-                if (usedChars[pos + i]) {
-                    isOverlap = true;
-                    break;
+            if (hskLevel) {
+                // 过滤常见的单字虚词及标点，保留实词单字（如"雪"）
+                if (!(len === 1 && STOP_WORDS.has(substr))) {
+                    // 检查该词的HSK等级是否在当前文章难度的允许范围内
+                    if (allowedLevels.has(hskLevel)) {
+                        if (!addedWords.has(substr)) {
+                            const data = VOCABULARY_DATABASE[substr];
+                            vocabulary.push({
+                                word: substr,
+                                pinyin: data?.pinyin || '',
+                                en: data?.en || '',
+                                cn: data?.cn || '',
+                                hskLevel,
+                            });
+                            addedWords.add(substr);
+                        }
+                    }
                 }
+                // 找到最长匹配后，游标前进对应的长度
+                i += len;
+                matched = true;
+                break;
             }
-
-            // 如果没有重叠，则认为这是一个有效的生词匹配
-            if (!isOverlap) {
-                // 标记这些字符为已使用
-                for (let i = 0; i < word.length; i++) {
-                    usedChars[pos + i] = true;
-                }
-                foundMatch = true;
-            }
-            // 继续找下一个位置，即使当前位置重叠，也可能在后文存在非重叠的出现
-            pos = content.indexOf(word, pos + 1);
         }
 
-        if (foundMatch) {
-            // 获取词典释义（如有）
-            const data = VOCABULARY_DATABASE[word];
-            vocabulary.push({
-                word,
-                pinyin: data?.pinyin || '',
-                en: data?.en || '',
-                cn: data?.cn || '',
-                hskLevel,
-            });
-            addedWords.add(word);
+        if (!matched) {
+            i++; // 如果找不到匹配的HSK词汇，游标前进1，继续检查下一个字符
         }
     }
 
@@ -123,38 +105,33 @@ export function analyzeArticleDifficulty(content) {
     const levelCounts = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7-9': 0 };
     let totalHskWords = 0;
 
-    const usedChars = new Array(content.length).fill(false);
     const STOP_WORDS = new Set(['的', '了', '和', '是', '在', '有', '我', '你', '他', '她', '它', '不', '没', '这', '那', '就', '也', '都', '要', '去', '来', '到', '说', '很', '好', '但', '出', '个', '得', '地', '与', '又', '着']);
-    const sortedVocab = [...HSK_VOCAB_MAP.entries()].sort((a, b) => b[0].length - a[0].length);
     const matched = new Set();
 
-    for (const [word, level] of sortedVocab) {
-        if (word.length === 1 && STOP_WORDS.has(word)) continue;
+    let i = 0;
+    while (i < content.length) {
+        let matchedSomething = false;
+        let maxLen = Math.min(10, content.length - i);
 
-        let pos = content.indexOf(word);
-        let foundMatch = false;
+        for (let len = maxLen; len >= 1; len--) {
+            const substr = content.substring(i, i + len);
+            const level = HSK_VOCAB_MAP.get(substr);
 
-        while (pos !== -1) {
-            let isOverlap = false;
-            for (let i = 0; i < word.length; i++) {
-                if (usedChars[pos + i]) {
-                    isOverlap = true;
-                    break;
+            if (level) {
+                if (!(len === 1 && STOP_WORDS.has(substr))) {
+                    if (!matched.has(substr)) {
+                        levelCounts[level] = (levelCounts[level] || 0) + 1;
+                        totalHskWords++;
+                        matched.add(substr);
+                    }
                 }
+                i += len;
+                matchedSomething = true;
+                break;
             }
-            if (!isOverlap) {
-                for (let i = 0; i < word.length; i++) {
-                    usedChars[pos + i] = true;
-                }
-                foundMatch = true;
-            }
-            pos = content.indexOf(word, pos + 1);
         }
-
-        if (foundMatch && !matched.has(word)) {
-            levelCounts[level] = (levelCounts[level] || 0) + 1;
-            totalHskWords++;
-            matched.add(word);
+        if (!matchedSomething) {
+            i++;
         }
     }
 
