@@ -28,43 +28,71 @@ export function autoDetectVocabulary(content, level) {
 
     const STOP_WORDS = new Set(['的', '了', '和', '是', '在', '有', '我', '你', '他', '她', '它', '不', '没', '这', '那', '就', '也', '都', '要', '去', '来', '到', '说', '很', '好', '但', '出', '个', '得', '地', '与', '又', '着']);
 
-    // 使用正向最大匹配算法 (FMM) 进行分词，避免交叉词的误判（如 "早上下雪" 错误匹配出 "上下"）
-    let i = 0;
-    while (i < content.length) {
-        let matched = false;
-        let maxLen = Math.min(10, content.length - i); // HSK词汇最长基本不超过10
+    // 使用原生的 Intl.Segmenter 进行上下文感知的自然语言分词（防 "不下雪" 误判为 "不下" + "雪"）
+    const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
+    const segments = segmenter.segment(content);
 
-        for (let len = maxLen; len >= 1; len--) {
-            const substr = content.substring(i, i + len);
-            const hskLevel = HSK_VOCAB_MAP.get(substr);
+    for (const s of segments) {
+        if (!s.isWordLike) continue;
+        const segmentText = s.segment;
+        const segmentLevel = HSK_VOCAB_MAP.get(segmentText);
 
-            if (hskLevel) {
-                // 过滤常见的单字虚词及标点，保留实词单字（如"雪"）
-                if (!(len === 1 && STOP_WORDS.has(substr))) {
-                    // 检查该词的HSK等级是否在当前文章难度的允许范围内
-                    if (allowedLevels.has(hskLevel)) {
-                        if (!addedWords.has(substr)) {
-                            const data = VOCABULARY_DATABASE[substr];
-                            vocabulary.push({
-                                word: substr,
-                                pinyin: data?.pinyin || '',
-                                en: data?.en || '',
-                                cn: data?.cn || '',
-                                hskLevel,
-                            });
-                            addedWords.add(substr);
-                        }
+        // 1. 如果整个NLP分词结果直接是一个HSK词汇
+        if (segmentLevel) {
+            // 过滤常见的单字虚词及标点，保留实词单字（如"雪"）
+            if (!(segmentText.length === 1 && STOP_WORDS.has(segmentText))) {
+                if (allowedLevels.has(segmentLevel)) {
+                    if (!addedWords.has(segmentText)) {
+                        const data = VOCABULARY_DATABASE[segmentText];
+                        vocabulary.push({
+                            word: segmentText,
+                            pinyin: data?.pinyin || '',
+                            en: data?.en || '',
+                            cn: data?.cn || '',
+                            hskLevel: segmentLevel,
+                        });
+                        addedWords.add(segmentText);
                     }
                 }
-                // 找到最长匹配后，游标前进对应的长度
-                i += len;
-                matched = true;
-                break;
             }
         }
+        // 2. 如果NLP分出的词（如"下雪"）不在HSK中，则对其内部使用 FMM (正向最大匹配) 降级拆分
+        else {
+            let i = 0;
+            while (i < segmentText.length) {
+                let matched = false;
+                let maxLen = Math.min(10, segmentText.length - i);
 
-        if (!matched) {
-            i++; // 如果找不到匹配的HSK词汇，游标前进1，继续检查下一个字符
+                for (let len = maxLen; len >= 1; len--) {
+                    const substr = segmentText.substring(i, i + len);
+                    const hskLevel = HSK_VOCAB_MAP.get(substr);
+
+                    if (hskLevel) {
+                        if (!(len === 1 && STOP_WORDS.has(substr))) {
+                            if (allowedLevels.has(hskLevel)) {
+                                if (!addedWords.has(substr)) {
+                                    const data = VOCABULARY_DATABASE[substr];
+                                    vocabulary.push({
+                                        word: substr,
+                                        pinyin: data?.pinyin || '',
+                                        en: data?.en || '',
+                                        cn: data?.cn || '',
+                                        hskLevel,
+                                    });
+                                    addedWords.add(substr);
+                                }
+                            }
+                        }
+                        i += len;
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched) {
+                    i++;
+                }
+            }
         }
     }
 
@@ -108,30 +136,51 @@ export function analyzeArticleDifficulty(content) {
     const STOP_WORDS = new Set(['的', '了', '和', '是', '在', '有', '我', '你', '他', '她', '它', '不', '没', '这', '那', '就', '也', '都', '要', '去', '来', '到', '说', '很', '好', '但', '出', '个', '得', '地', '与', '又', '着']);
     const matched = new Set();
 
-    let i = 0;
-    while (i < content.length) {
-        let matchedSomething = false;
-        let maxLen = Math.min(10, content.length - i);
+    // 使用原生的 Intl.Segmenter 进行上下文感知的自然语言分词
+    const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
+    const segments = segmenter.segment(content);
 
-        for (let len = maxLen; len >= 1; len--) {
-            const substr = content.substring(i, i + len);
-            const level = HSK_VOCAB_MAP.get(substr);
+    for (const s of segments) {
+        if (!s.isWordLike) continue;
+        const segmentText = s.segment;
+        const segmentLevel = HSK_VOCAB_MAP.get(segmentText);
 
-            if (level) {
-                if (!(len === 1 && STOP_WORDS.has(substr))) {
-                    if (!matched.has(substr)) {
-                        levelCounts[level] = (levelCounts[level] || 0) + 1;
-                        totalHskWords++;
-                        matched.add(substr);
-                    }
+        if (segmentLevel) {
+            if (!(segmentText.length === 1 && STOP_WORDS.has(segmentText))) {
+                if (!matched.has(segmentText)) {
+                    levelCounts[segmentLevel] = (levelCounts[segmentLevel] || 0) + 1;
+                    totalHskWords++;
+                    matched.add(segmentText);
                 }
-                i += len;
-                matchedSomething = true;
-                break;
             }
         }
-        if (!matchedSomething) {
-            i++;
+        else {
+            let i = 0;
+            while (i < segmentText.length) {
+                let matchedSomething = false;
+                let maxLen = Math.min(10, segmentText.length - i);
+
+                for (let len = maxLen; len >= 1; len--) {
+                    const substr = segmentText.substring(i, i + len);
+                    const subLevel = HSK_VOCAB_MAP.get(substr);
+
+                    if (subLevel) {
+                        if (!(len === 1 && STOP_WORDS.has(substr))) {
+                            if (!matched.has(substr)) {
+                                levelCounts[subLevel] = (levelCounts[subLevel] || 0) + 1;
+                                totalHskWords++;
+                                matched.add(substr);
+                            }
+                        }
+                        i += len;
+                        matchedSomething = true;
+                        break;
+                    }
+                }
+                if (!matchedSomething) {
+                    i++;
+                }
+            }
         }
     }
 
