@@ -381,13 +381,6 @@ function TeacherPage() {
                                                 onChange={(e) => updateVocabWord(index, 'en', e.target.value)}
                                                 placeholder="英文释义"
                                             />
-                                            <input
-                                                type="text"
-                                                className="input input-sm"
-                                                value={vocab.cn}
-                                                onChange={(e) => updateVocabWord(index, 'cn', e.target.value)}
-                                                placeholder="中文解释"
-                                            />
                                         </div>
                                         <button
                                             type="button"

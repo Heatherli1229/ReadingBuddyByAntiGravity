@@ -4,6 +4,7 @@ import { useArticles } from '../context/ArticleContext';
 import { useVocab } from '../context/VocabContext';
 import { speakWord } from '../utils/tts';
 import AudioPlayer from '../components/AudioPlayer';
+import ParagraphAudioButton from '../components/ParagraphAudioButton';
 import VocabPopup from '../components/VocabPopup';
 import './ReadingPage.css';
 
@@ -37,41 +38,47 @@ function ReadingPage() {
         return map;
     }, [article.vocabulary]);
 
-    // 将文章内容转换为带有生词标记的元素
+    // 将文章内容转换为带有生词标记和段落发音的元素
     const renderContent = () => {
         const content = article.content;
-        const words = Array.from(vocabMap.keys());
+        const words = Array.from(vocabMap.keys()).sort((a, b) => b.length - a.length);
+        const pattern = words.length > 0
+            ? new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
+            : null;
 
-        // 按长度排序，优先匹配长词
-        words.sort((a, b) => b.length - a.length);
-
-        // 创建正则表达式匹配所有生词
-        if (words.length === 0) return content;
-
-        const pattern = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g');
-        const parts = content.split(pattern);
-
-        return parts.map((part, index) => {
-            if (vocabMap.has(part)) {
-                const word = vocabMap.get(part);
-                const isSaved = isWordSaved(part);
-                return (
-                    <span
-                        key={index}
-                        className={`vocab-word ${isSaved ? 'saved' : ''}`}
-                        onClick={() => setSelectedWord(word)}
-                    >
-                        {part}
-                    </span>
-                );
+        return content.split('\n').map((paragraph, pIndex) => {
+            if (!paragraph.trim()) {
+                // 空行保留
+                return <br key={`br-${pIndex}`} />;
             }
-            // 处理换行
-            return part.split('\n').map((line, lineIndex) => (
-                <span key={`${index}-${lineIndex}`}>
-                    {lineIndex > 0 && <br />}
-                    {line}
-                </span>
-            ));
+
+            // 对段落内容进行生词替换
+            let parts = [paragraph];
+            if (pattern) {
+                parts = paragraph.split(pattern);
+            }
+
+            return (
+                <p key={`p-${pIndex}`} className="reading-paragraph" style={{ marginBottom: '1rem', lineHeight: '1.8' }}>
+                    {parts.map((part, index) => {
+                        if (vocabMap.has(part)) {
+                            const word = vocabMap.get(part);
+                            const isSaved = isWordSaved(part);
+                            return (
+                                <span
+                                    key={index}
+                                    className={`vocab-word ${isSaved ? 'saved' : ''}`}
+                                    onClick={() => setSelectedWord(word)}
+                                >
+                                    {part}
+                                </span>
+                            );
+                        }
+                        return <span key={index}>{part}</span>;
+                    })}
+                    <ParagraphAudioButton text={paragraph} />
+                </p>
+            );
         });
     };
 
@@ -141,7 +148,6 @@ function ReadingPage() {
                                 </div>
                                 <div className="vocab-card-body">
                                     <p className="vocab-card-en">{word.en}</p>
-                                    <p className="vocab-card-cn">{word.cn}</p>
                                     {word.hskLevel && (
                                         <p className="vocab-card-hsk">HSK {word.hskLevel} 级</p>
                                     )}
