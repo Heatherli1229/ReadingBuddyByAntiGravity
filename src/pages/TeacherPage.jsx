@@ -147,6 +147,7 @@ function TeacherPage() {
 
         // 分析文章难度
         const analysis = analyzeArticleDifficulty(formData.content);
+        let effectiveLevel = formData.level;
 
         // 如果分析出的难度与选择的不一致，提示用户
         if (analysis.level !== formData.level) {
@@ -157,11 +158,12 @@ function TeacherPage() {
             );
 
             if (confirmChange) {
+                effectiveLevel = analysis.level;
                 setFormData(prev => ({ ...prev, level: analysis.level }));
             }
         }
 
-        const detectedVocab = autoDetectVocabulary(formData.content, formData.level);
+        const detectedVocab = autoDetectVocabulary(formData.content, effectiveLevel);
 
         if (detectedVocab.length === 0) {
             alert('未能识别到生词，请检查文章内容或手动添加');

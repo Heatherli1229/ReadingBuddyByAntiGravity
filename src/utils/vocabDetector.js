@@ -12,6 +12,15 @@ function isChinese(char) {
 }
 
 /**
+ * 一些常见的包含HSK词汇但语义不同的习惯语/成语。
+ * 在进行生词识别前会先将其屏蔽，防止误提取内部的词（例如"手把手"中的"把手"）。
+ */
+const COMMON_PHRASES = [
+    '手把手', '小心翼翼', '不知不觉', '一干二净', '乱七八糟', '十全十美', '五颜六色',
+    '一模一样', '不约而同', '理所当然', '全力以赴', '莫名其妙', '半途而废'
+];
+
+/**
  * 智能识别文章中的生词（基于HSK 2025大纲）
  * @param {string} content 文章内容
  * @param {string} level 文章等级：入门级/初级/中级/高级
@@ -25,18 +34,24 @@ export function autoDetectVocabulary(content, level) {
 
     const vocabulary = [];
     const addedWords = new Set();
-
     const STOP_WORDS = new Set(['的', '了', '和', '是', '在', '有', '我', '你', '他', '她', '它', '不', '没', '这', '那', '就', '也', '都', '要', '去', '来', '到', '说', '很', '好', '但', '出', '个', '得', '地', '与', '又', '着']);
 
-    // 使用原生的 Intl.Segmenter 进行上下文感知的自然语言分词（防 "不下雪" 误判为 "不下" + "雪"）
+    let textToProcess = content;
+    // 屏蔽常见的非HSK短语，防止其内部子串被误识别为生词（如"手把手"中的"把手"）
+    for (const phrase of COMMON_PHRASES) {
+        if (textToProcess.includes(phrase)) {
+            textToProcess = textToProcess.split(phrase).join(' '.repeat(phrase.length));
+        }
+    }
+
+    // 使用原生的 Intl.Segmenter 进行上下文感知的自然语言分词
     const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
-    const segments = segmenter.segment(content);
+    const segments = segmenter.segment(textToProcess);
 
     for (const s of segments) {
         if (!s.isWordLike) continue;
         const segmentText = s.segment;
         const segmentLevel = HSK_VOCAB_MAP.get(segmentText);
-
         // 1. 如果整个NLP分词结果直接是一个HSK词汇
         if (segmentLevel) {
             // 过滤常见的单字虚词及标点，保留实词单字（如"雪"）
@@ -136,9 +151,17 @@ export function analyzeArticleDifficulty(content) {
     const STOP_WORDS = new Set(['的', '了', '和', '是', '在', '有', '我', '你', '他', '她', '它', '不', '没', '这', '那', '就', '也', '都', '要', '去', '来', '到', '说', '很', '好', '但', '出', '个', '得', '地', '与', '又', '着']);
     const matched = new Set();
 
+    let textToProcess = content;
+    // 屏蔽常见的非HSK短语，防止其内部子串被误识别为生词（如"手把手"中的"把手"）
+    for (const phrase of COMMON_PHRASES) {
+        if (textToProcess.includes(phrase)) {
+            textToProcess = textToProcess.split(phrase).join(' '.repeat(phrase.length));
+        }
+    }
+
     // 使用原生的 Intl.Segmenter 进行上下文感知的自然语言分词
     const segmenter = new Intl.Segmenter('zh-CN', { granularity: 'word' });
-    const segments = segmenter.segment(content);
+    const segments = segmenter.segment(textToProcess);
 
     for (const s of segments) {
         if (!s.isWordLike) continue;
