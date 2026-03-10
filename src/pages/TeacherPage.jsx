@@ -23,7 +23,8 @@ const EMPTY_VOCAB = {
     word: '',
     pinyin: '',
     en: '',
-    cn: ''
+    cn: '',
+    hskLevel: '1'
 };
 
 function TeacherPage() {
@@ -383,6 +384,26 @@ function TeacherPage() {
                                                 onChange={(e) => updateVocabWord(index, 'en', e.target.value)}
                                                 placeholder="英文释义"
                                             />
+                                            <input
+                                                type="text"
+                                                className="input input-sm"
+                                                value={vocab.cn}
+                                                onChange={(e) => updateVocabWord(index, 'cn', e.target.value)}
+                                                placeholder="中文解释"
+                                            />
+                                            <select
+                                                className="input input-sm"
+                                                value={vocab.hskLevel || '1'}
+                                                onChange={(e) => updateVocabWord(index, 'hskLevel', e.target.value)}
+                                            >
+                                                <option value="1">HSK 1</option>
+                                                <option value="2">HSK 2</option>
+                                                <option value="3">HSK 3</option>
+                                                <option value="4">HSK 4</option>
+                                                <option value="5">HSK 5</option>
+                                                <option value="6">HSK 6</option>
+                                                <option value="7-9">HSK 7-9</option>
+                                            </select>
                                         </div>
                                         <button
                                             type="button"
