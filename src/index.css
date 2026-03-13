@@ -48,7 +48,7 @@
   --color-hsk-4: #10B981; /* Green */
   --color-hsk-5: #06B6D4; /* Cyan/Blue-Green */
   --color-hsk-6: #3B82F6; /* Blue */
-  --color-hsk-7: #581C87; /* Deep Purple */
+  --color-hsk-7-9: #581C87; /* Deep Purple */
   
   /* 生词高亮 */
   --color-vocab-highlight: #FEF3C7;
@@ -352,7 +352,7 @@ img {
 .hsk-level-4 { color: var(--color-hsk-4); }
 .hsk-level-5 { color: var(--color-hsk-5); }
 .hsk-level-6 { color: var(--color-hsk-6); }
-.hsk-level-7-9 { color: var(--color-hsk-7); }
+.hsk-level-7-9 { color: var(--color-hsk-7-9); }
 
 .bg-hsk-1 { background-color: rgba(239, 68, 68, 0.1); color: var(--color-hsk-1); }
 .bg-hsk-2 { background-color: rgba(249, 115, 22, 0.1); color: var(--color-hsk-2); }
@@ -360,7 +360,7 @@ img {
 .bg-hsk-4 { background-color: rgba(16, 185, 129, 0.1); color: var(--color-hsk-4); }
 .bg-hsk-5 { background-color: rgba(6, 182, 212, 0.1); color: var(--color-hsk-5); }
 .bg-hsk-6 { background-color: rgba(59, 130, 246, 0.1); color: var(--color-hsk-6); }
-.bg-hsk-7-9 { background-color: rgba(139, 92, 246, 0.1); color: var(--color-hsk-7); }
+.bg-hsk-7-9 { background-color: rgba(88, 28, 135, 0.1); color: var(--color-hsk-7-9); }
 
 /* ========================================
    表单组件
