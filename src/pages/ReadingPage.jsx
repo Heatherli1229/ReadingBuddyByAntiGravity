@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useArticles } from '../context/ArticleContext';
 import { useVocab } from '../context/VocabContext';
 import { speakWord } from '../utils/tts';
+import { getWordHskLevel } from '../utils/vocabDetector';
 import AudioPlayer from '../components/AudioPlayer';
 import ParagraphAudioButton from '../components/ParagraphAudioButton';
 import VocabPopup from '../components/VocabPopup';
@@ -64,10 +65,16 @@ function ReadingPage() {
                         if (vocabMap.has(part)) {
                             const word = vocabMap.get(part);
                             const isSaved = isWordSaved(part);
+                            const hskLevel = word.hskLevel || getWordHskLevel(part) || '1';
                             return (
                                 <span
                                     key={index}
                                     className={`vocab-word ${isSaved ? 'saved' : ''}`}
+                                    style={{ 
+                                        color: `var(--color-hsk-${hskLevel})`, 
+                                        borderBottomColor: `var(--color-hsk-${hskLevel})`, 
+                                        backgroundColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 15%, transparent)` 
+                                    }}
                                     onClick={() => setSelectedWord(word)}
                                 >
                                     {part}
@@ -140,17 +147,22 @@ function ReadingPage() {
                 <div className="vocab-grid">
                     {article.vocabulary.map((word, index) => {
                         const isSaved = isWordSaved(word.word);
+                        const hskLevel = word.hskLevel || getWordHskLevel(word.word) || '1';
                         return (
-                            <div key={index} className="vocab-card card-flat">
+                            <div key={index} className="vocab-card card-flat" style={{ borderLeft: `4px solid var(--color-hsk-${hskLevel})` }}>
                                 <div className="vocab-card-header">
-                                    <span className="vocab-card-word">{word.word}</span>
+                                    <span className="vocab-card-word" style={{ color: `var(--color-hsk-${hskLevel})` }}>{word.word}</span>
                                     <span className="vocab-card-pinyin">{word.pinyin}</span>
                                 </div>
                                 <div className="vocab-card-body">
                                     <p className="vocab-card-en">{word.en}</p>
-                                    {word.hskLevel && (
-                                        <p className="vocab-card-hsk">HSK {word.hskLevel} 级</p>
-                                    )}
+                                    <p className="vocab-card-cn">{word.cn}</p>
+                                    <p className="vocab-card-hsk" style={{ 
+                                        backgroundColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 15%, transparent)`,
+                                        color: `var(--color-hsk-${hskLevel})`
+                                    }}>
+                                        HSK {hskLevel} 级
+                                    </p>
                                 </div>
                                 <div className="vocab-card-actions">
                                     <button

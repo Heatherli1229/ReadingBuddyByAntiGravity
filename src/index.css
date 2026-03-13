@@ -41,6 +41,15 @@
   --color-level-intermediate: #F59E0B;
   --color-level-advanced: #EF4444;
   
+  /* HSK Spectrum Colors (1: Red -> 7-9: Violet) */
+  --color-hsk-1: #EF4444; /* Red */
+  --color-hsk-2: #F97316; /* Orange */
+  --color-hsk-3: #F59E0B; /* Yellow-Orange */
+  --color-hsk-4: #10B981; /* Green */
+  --color-hsk-5: #06B6D4; /* Cyan/Blue-Green */
+  --color-hsk-6: #3B82F6; /* Blue */
+  --color-hsk-7: #8B5CF6; /* Violet */
+  
   /* 生词高亮 */
   --color-vocab-highlight: #FEF3C7;
   --color-vocab-underline: #F59E0B;
@@ -335,6 +344,23 @@ img {
   border-radius: var(--radius-full);
   display: inline-block;
 }
+
+/* HSK Spectrum Classes */
+.hsk-level-1 { color: var(--color-hsk-1); }
+.hsk-level-2 { color: var(--color-hsk-2); }
+.hsk-level-3 { color: var(--color-hsk-3); }
+.hsk-level-4 { color: var(--color-hsk-4); }
+.hsk-level-5 { color: var(--color-hsk-5); }
+.hsk-level-6 { color: var(--color-hsk-6); }
+.hsk-level-7-9 { color: var(--color-hsk-7); }
+
+.bg-hsk-1 { background-color: rgba(239, 68, 68, 0.1); color: var(--color-hsk-1); }
+.bg-hsk-2 { background-color: rgba(249, 115, 22, 0.1); color: var(--color-hsk-2); }
+.bg-hsk-3 { background-color: rgba(245, 158, 11, 0.1); color: var(--color-hsk-3); }
+.bg-hsk-4 { background-color: rgba(16, 185, 129, 0.1); color: var(--color-hsk-4); }
+.bg-hsk-5 { background-color: rgba(6, 182, 212, 0.1); color: var(--color-hsk-5); }
+.bg-hsk-6 { background-color: rgba(59, 130, 246, 0.1); color: var(--color-hsk-6); }
+.bg-hsk-7-9 { background-color: rgba(139, 92, 246, 0.1); color: var(--color-hsk-7); }
 
 /* ========================================
    表单组件
