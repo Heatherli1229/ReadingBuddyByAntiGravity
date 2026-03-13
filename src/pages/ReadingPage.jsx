@@ -53,10 +53,37 @@ function ReadingPage() {
                 return <br key={`br-${pIndex}`} />;
             }
 
-            // 对段落内容进行生词替换
-            let parts = [paragraph];
-            if (pattern) {
-                parts = paragraph.split(pattern);
+            // 对段落内容进行生词替换 - 使用正向最大匹配算法，防止子词覆盖（如“复杂”中的“杂”）
+            const parts = [];
+            let i = 0;
+            while (i < paragraph.length) {
+                let matchedWord = null;
+                // 从当前位置向后匹配，优先匹配最长的词汇
+                // 假设最长词汇长度不超过10个字符
+                const maxLen = Math.min(10, paragraph.length - i);
+                
+                for (let len = maxLen; len > 0; len--) {
+                    const str = paragraph.substring(i, i + len);
+                    if (vocabMap.has(str)) {
+                        matchedWord = str;
+                        break;
+                    }
+                }
+
+                if (matchedWord) {
+                    // 如果之前累积了普通文本，先将其作为独立part推入，这样就只有遇到生词时才切割
+                    parts.push(matchedWord);
+                    i += matchedWord.length;
+                } else {
+                    // 如果当前字符不是生词的开头，则将其作为普通文本累积
+                    // 为了优化 React 渲染，我们把连续的普通字符合并
+                    if (parts.length > 0 && !vocabMap.has(parts[parts.length - 1])) {
+                        parts[parts.length - 1] += paragraph[i];
+                    } else {
+                        parts.push(paragraph[i]);
+                    }
+                    i++;
+                }
             }
 
             return (

@@ -45,40 +45,63 @@ function shouldBeVocab(hskLevel, articleLevel) {
 }
 
 /**
- * 智能识别文章中的生词
+ * 智能识别文章中的生词 - 使用正向最大匹配算法 (Forward Maximum Matching)
+ * 首先用完整的HSK词库对文本进行分词，避免“复杂”中的“杂”被单独识别。
  * @param {string} content 文章内容
  * @param {string} level 文章等级：入门级/初级/中级/高级
  * @returns {Array} 生词列表
  */
 export function autoDetectVocabulary(content, level) {
-    const vocabulary = [];
-    const addedWords = new Set();
+    const vocabularyMap = new Map(); // 使用Map避免重复，并方便提取
     
-    // 取出所有已知词汇，按长度降序排序（长词优先匹配避免子词覆盖）
+    // 取出所有已知词汇
     const allKnownWords = Array.from(HSK_VOCAB_MAP.keys());
-    const sortedWords = allKnownWords.sort((a, b) => b.length - a.length);
+    // 找出最长词的长度，用于优化的最大匹配
+    let maxLength = 0;
+    for (const word of allKnownWords) {
+        if (word.length > maxLength) maxLength = word.length;
+    }
 
-    // 遍历所有词汇，检查是否在文章中出现
-    for (const word of sortedWords) {
-        if (addedWords.has(word)) continue;
-        
-        // 简单匹配算法，更好的方式是用分词工具，但这里为了保持无依赖直接用包含
-        if (content.includes(word)) {
-            const hskLevel = HSK_VOCAB_MAP.get(word);
-            
-            if (shouldBeVocab(hskLevel, level)) {
-                const def = getWordDefinition(word) || {};
-                vocabulary.push({
-                    word,
-                    hskLevel, // 保存HSK等级
-                    pinyin: def.pinyin || '',
-                    en: def.en || '',
-                    cn: def.cn || ''
-                });
-                addedWords.add(word);
+    // 正向最大匹配分词
+    let i = 0;
+    while (i < content.length) {
+        let matched = false;
+        // 从最大长度开始向后截取尝试匹配
+        for (let len = Math.min(maxLength, content.length - i); len > 0; len--) {
+            const str = content.substring(i, i + len);
+            if (HSK_VOCAB_MAP.has(str)) {
+                // 找到完整的HSK词汇
+                const hskLevel = HSK_VOCAB_MAP.get(str);
+                
+                // 判断这个词是否应该在该文章难度中被标记为生词
+                if (shouldBeVocab(hskLevel, level)) {
+                    if (!vocabularyMap.has(str)) {
+                        const def = getWordDefinition(str) || {};
+                        vocabularyMap.set(str, {
+                            word: str,
+                            hskLevel,
+                            pinyin: def.pinyin || '',
+                            en: def.en || '',
+                            cn: def.cn || ''
+                        });
+                    }
+                }
+                
+                // 无论是否符合当前等级的生词标准，既然匹配到了这是一个HSK词汇（比如“复杂”），
+                // 就应该跳过整个词的长度，这样里面的子字（比如“杂”）就不会被单独识别了。
+                i += len;
+                matched = true;
+                break;
             }
         }
+        
+        // 如果没有匹配到任何HSK词汇，则单字跳过
+        if (!matched) {
+            i += 1;
+        }
     }
+
+    const vocabulary = Array.from(vocabularyMap.values());
 
     // 按照HSK难度等级排序
     vocabulary.sort((a, b) => {
