@@ -1,0 +1,79 @@
+.profile-page {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
+
+.profile-card {
+    background: var(--color-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-gray-200);
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 480px;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--gradient-primary);
+    color: white;
+    font-size: 1.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.profile-header h2 {
+    font-size: 1.4rem;
+    color: var(--color-gray-900);
+    margin-bottom: 0.35rem;
+}
+
+.role-badge {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.2rem 0.75rem;
+    border-radius: 999px;
+}
+
+.role-admin { background: rgba(239,68,68,0.12); color: #dc2626; }
+.role-teacher { background: rgba(59,130,246,0.12); color: #2563eb; }
+.role-student { background: rgba(16,185,129,0.12); color: #059669; }
+
+.profile-section h3 {
+    font-size: 1rem;
+    color: var(--color-gray-700);
+    margin-bottom: 1.25rem;
+    font-weight: 600;
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+}
+
+.profile-msg {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.profile-msg-success { background: rgba(16,185,129,0.1); color: #059669; border: 1px solid rgba(16,185,129,0.2); }
+.profile-msg-error   { background: rgba(239,68,68,0.1);  color: #dc2626; border: 1px solid rgba(239,68,68,0.2); }

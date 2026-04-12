@@ -1,13 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useArticles } from '../context/ArticleContext';
+import { useAuth } from '../context/AuthContext';
 import { autoDetectVocabulary, analyzeArticleDifficulty } from '../utils/vocabDetector';
 import './TeacherPage.css';
-
-// 默认管理员账号
-const ADMIN_CREDENTIALS = {
-    username: 'admin',
-    password: 'admin123'
-};
 
 // 空白文章模板
 const EMPTY_ARTICLE = {
@@ -28,35 +24,26 @@ const EMPTY_VOCAB = {
 };
 
 function TeacherPage() {
-    const { articles, addArticle, updateArticle, deleteArticle, resetToDefault } = useArticles();
+    const { articles, addArticle, updateArticle, deleteArticle } = useArticles();
+    const { currentUser, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
 
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    // 保护路由
+    useEffect(() => {
+        if (!isAuthenticated) {
+            navigate('/auth');
+        }
+    }, [isAuthenticated, navigate]);
 
     // 编辑状态
     const [editingArticle, setEditingArticle] = useState(null);
     const [formData, setFormData] = useState(EMPTY_ARTICLE);
     const [isCreating, setIsCreating] = useState(false);
 
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-            setIsLoggedIn(true);
-            setError('');
-        } else {
-            setError('用户名或密码错误');
-        }
-    };
+    // 获取当前用户创建的所有文章
+    const myArticles = articles.filter(a => a.authorId === currentUser?.id);
 
-    const handleLogout = () => {
-        setIsLoggedIn(false);
-        setUsername('');
-        setPassword('');
-        setEditingArticle(null);
-        setIsCreating(false);
-    };
+    if (!isAuthenticated) return null; // 避免闪烁
 
     // 开始创建新文章
     const handleCreate = () => {
@@ -198,64 +185,7 @@ function TeacherPage() {
         alert(message);
     };
 
-    // 登录页面
-    if (!isLoggedIn) {
-        return (
-            <div className="teacher-page">
-                <div className="login-container">
-                    <div className="login-card card">
-                        <div className="login-header">
-                            <span className="login-icon">🔐</span>
-                            <h1 className="login-title">教师登录</h1>
-                            <p className="login-subtitle">请输入管理员账号密码</p>
-                        </div>
-
-                        <form onSubmit={handleLogin} className="login-form">
-                            {error && (
-                                <div className="login-error">
-                                    ⚠️ {error}
-                                </div>
-                            )}
-
-                            <div className="form-group">
-                                <label htmlFor="username" className="form-label">用户名</label>
-                                <input
-                                    id="username"
-                                    type="text"
-                                    className="input"
-                                    value={username}
-                                    onChange={(e) => setUsername(e.target.value)}
-                                    placeholder="请输入用户名"
-                                    required
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label htmlFor="password" className="form-label">密码</label>
-                                <input
-                                    id="password"
-                                    type="password"
-                                    className="input"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="请输入密码"
-                                    required
-                                />
-                            </div>
-
-                            <button type="submit" className="btn btn-primary login-btn">
-                                登录
-                            </button>
-                        </form>
-
-                        <div className="login-hint">
-                            💡 默认账号: admin / admin123
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    // (登录页面已被移除，由 AuthPage 接管)
 
     // 编辑表单
     if (isCreating || editingArticle) {
@@ -384,13 +314,6 @@ function TeacherPage() {
                                                 onChange={(e) => updateVocabWord(index, 'en', e.target.value)}
                                                 placeholder="英文释义"
                                             />
-                                            <input
-                                                type="text"
-                                                className="input input-sm"
-                                                value={vocab.cn}
-                                                onChange={(e) => updateVocabWord(index, 'cn', e.target.value)}
-                                                placeholder="中文解释"
-                                            />
                                             <select
                                                 className="input input-sm"
                                                 value={vocab.hskLevel || '1'}
@@ -431,26 +354,35 @@ function TeacherPage() {
         );
     }
 
-    // 文章列表
+    // 文章列表页面
     return (
         <div className="teacher-page">
             <header className="teacher-header">
                 <div className="header-left">
-                    <h1 className="teacher-title">教师后台 👩‍🏫</h1>
-                    <span className="article-count">{articles.length} 篇文章</span>
+                    <h1 className="teacher-title">我的文章 ✍️</h1>
+                    <span className="article-count">共 {myArticles.length} 篇文章</span>
                 </div>
                 <div className="header-actions">
                     <button className="btn btn-primary" onClick={handleCreate}>
                         ➕ 添加文章
                     </button>
-                    <button className="btn btn-ghost" onClick={handleLogout}>
-                        退出登录
-                    </button>
+                    {currentUser?.role === 'teacher' && (
+                        <button
+                            className="btn btn-ghost"
+                            onClick={() => {
+                                if (confirm('确定要重置为默认文章吗？所有自定义文章将被删除。')) {
+                                    resetToDefault();
+                                }
+                            }}
+                        >
+                            🔄 重置为默认文章
+                        </button>
+                    )}
                 </div>
             </header>
 
             <div className="article-list">
-                {articles.map(article => (
+                {myArticles.map(article => (
                     <div key={article.id} className="article-item card-flat">
                         <div className="article-item-info">
                             <div className="article-item-header">
@@ -465,6 +397,12 @@ function TeacherPage() {
                             <p className="article-item-subtitle">{article.title_en}</p>
                         </div>
                         <div className="article-item-actions">
+                            <Link
+                                to={`/read/${article.id}`}
+                                className="btn btn-sm btn-primary"
+                            >
+                                📖 阅读
+                            </Link>
                             <button
                                 className="btn btn-sm btn-secondary"
                                 onClick={() => handleEdit(article)}
@@ -473,26 +411,21 @@ function TeacherPage() {
                             </button>
                             <button
                                 className="btn btn-sm btn-ghost"
-                                onClick={() => handleDelete(article.id)}
+                                onClick={() => deleteArticle(article.id)}
                             >
                                 🗑️ 删除
                             </button>
                         </div>
                     </div>
                 ))}
-            </div>
 
-            <div className="teacher-footer">
-                <button
-                    className="btn btn-ghost"
-                    onClick={() => {
-                        if (confirm('确定要重置为默认文章吗？所有自定义文章将被删除。')) {
-                            resetToDefault();
-                        }
-                    }}
-                >
-                    🔄 重置为默认文章
-                </button>
+                {myArticles.length === 0 && (
+                    <div className="empty-state" style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-gray-500)', gridColumn: '1 / -1' }}>
+                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+                        <h3>还没有上传任何文章</h3>
+                        <p>点击右上角的按钮开始创作吧</p>
+                    </div>
+                )}
             </div>
         </div>
     );

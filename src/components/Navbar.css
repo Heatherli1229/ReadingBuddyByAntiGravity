@@ -59,38 +59,69 @@
     transition: all var(--transition-fast);
 }
 
-.navbar-link:hover {
-    background: var(--color-gray-100);
-    color: var(--color-gray-800);
-}
-
+.navbar-link:hover,
 .navbar-link.active {
-    background: var(--gradient-soft);
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
+    background-color: var(--color-gray-50);
 }
 
 .vocab-link {
-    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.vocab-icon {
+.vocab-icon, .teacher-icon {
     font-size: 1.1rem;
 }
 
 .vocab-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 var(--spacing-2);
-    font-size: var(--font-size-xs);
+    background: var(--color-primary);
+    color: white;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: var(--color-white);
-    background: var(--gradient-primary);
-    border-radius: var(--radius-full);
-    margin-left: var(--spacing-1);
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    margin-left: 0.25rem;
 }
+
+.navbar-auth-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-left: 1rem;
+    padding-left: 1rem;
+    border-left: 1px solid var(--color-gray-200);
+}
+
+.navbar-user-greeting {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 0.95rem;
+    color: var(--color-gray-700);
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-md);
+    transition: background var(--transition-fast);
+}
+
+.navbar-user-greeting:hover {
+    background: var(--color-gray-100);
+    color: var(--color-gray-900);
+}
+
+.nav-role-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+}
+
+.nav-role-tag.admin   { background: rgba(239,68,68,0.12); color: #dc2626; }
+.nav-role-tag.teacher { background: rgba(59,130,246,0.12); color: #2563eb; }
+
 
 @media (max-width: 640px) {
     .navbar-title {

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { articles as initialArticles } from '../data/articles';
+import { useAuth } from './AuthContext';
 
 // 创建文章上下文
 const ArticleContext = createContext();
@@ -36,12 +37,15 @@ export function ArticleProvider({ children }) {
         return articles.filter(article => article.level === level);
     };
 
+    const { currentUser } = useAuth();
+
     // 添加文章
     const addArticle = (article) => {
         const newId = Math.max(0, ...articles.map(a => a.id)) + 1;
         const newArticle = {
             ...article,
             id: newId,
+            authorId: currentUser ? currentUser.id : 'teacher', // fallback just in case
             characters: article.content.length,
             estimated_time: `${Math.ceil(article.content.length / 100)}分钟`
         };

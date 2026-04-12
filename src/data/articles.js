@@ -5,6 +5,7 @@ export const articles = [
         title_cn: "我的家",
         title_en: "My Family",
         level: "初级",
+        authorId: "teacher",
         characters: 180,
         estimated_time: "2分钟",
         content: `我叫小明。我的家有四口人：爸爸、妈妈、姐姐和我。

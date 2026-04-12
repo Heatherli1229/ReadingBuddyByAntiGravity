@@ -1,32 +1,49 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 // 创建生词库上下文
 const VocabContext = createContext();
 
-// 本地存储的键名
-const STORAGE_KEY = 'ai-reading-buddy-vocab';
+// 按用户 ID 生成独立的 localStorage 键名
+const storageKey = (userId) =>
+    userId ? `ai-reading-buddy-vocab-${userId}` : null;
+
+// 读取指定用户的生词列表
+const loadWords = (userId) => {
+    const key = storageKey(userId);
+    if (!key) return [];
+    try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+};
 
 // 生词库提供者组件
 export function VocabProvider({ children }) {
-    // 从 LocalStorage 加载初始数据
-    const [savedWords, setSavedWords] = useState(() => {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            return stored ? JSON.parse(stored) : [];
-        } catch {
-            return [];
-        }
-    });
+    const { currentUser } = useAuth();
+    const userId = currentUser?.id ?? null;
 
-    // 当生词列表变化时，保存到 LocalStorage
+    // 初始化：从当前用户的 localStorage slot 加载
+    const [savedWords, setSavedWords] = useState(() => loadWords(userId));
+
+    // 当用户切换（登录/退出/切换账号）时，重新加载对应用户的生词
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(savedWords));
-    }, [savedWords]);
+        setSavedWords(loadWords(userId));
+    }, [userId]);
+
+    // 当生词列表变化时，保存到对应用户的 localStorage
+    useEffect(() => {
+        const key = storageKey(userId);
+        if (key) {
+            localStorage.setItem(key, JSON.stringify(savedWords));
+        }
+    }, [savedWords, userId]);
 
     // 添加生词
     const addWord = (word) => {
         setSavedWords(prev => {
-            // 检查是否已存在
             const exists = prev.some(w => w.word === word.word);
             if (exists) return prev;
             return [...prev, { ...word, addedAt: Date.now() }];
@@ -81,3 +98,4 @@ export function useVocab() {
 }
 
 export default VocabContext;
+

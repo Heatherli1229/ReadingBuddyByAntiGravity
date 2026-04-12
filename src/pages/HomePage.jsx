@@ -1,17 +1,22 @@
 import { useState, useMemo } from 'react';
 import { useArticles } from '../context/ArticleContext';
+import { useAuth } from '../context/AuthContext';
 import ArticleCard from '../components/ArticleCard';
 import SearchFilter from '../components/SearchFilter';
 import './HomePage.css';
 
 function HomePage() {
     const { getAllArticles, getArticlesByLevel } = useArticles();
+    const { currentUser, isPublicAuthor } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLevel, setSelectedLevel] = useState('全部');
 
     // 过滤文章
     const filteredArticles = useMemo(() => {
         let articles = getAllArticles();
+
+        // Visibility: show public (teacher/admin authored) + own private articles
+        articles = articles.filter(a => isPublicAuthor(a.authorId) || (currentUser && a.authorId === currentUser.id));
 
         // 按等级筛选
         if (selectedLevel && selectedLevel !== '全部') {
@@ -27,7 +32,7 @@ function HomePage() {
         }
 
         return articles;
-    }, [searchQuery, selectedLevel, getAllArticles, getArticlesByLevel]);
+    }, [searchQuery, selectedLevel, getAllArticles, getArticlesByLevel, currentUser]);
 
     return (
         <div className="home-page">
