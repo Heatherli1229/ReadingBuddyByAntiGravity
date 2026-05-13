@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import './ArticleCard.css';
 
-function ArticleCard({ article }) {
+function ArticleCard({ article, sourceType }) {
     const { id, title_cn, title_en, level, characters, estimated_time, content } = article;
 
     // 获取文章摘要（前100个字符）
@@ -18,8 +18,29 @@ function ArticleCard({ article }) {
         }
     };
 
+    // 根据来源类型返回卡片样式
+    const getCardClass = () => {
+        if (sourceType === 'teacher') return 'article-card card card-teacher';
+        if (sourceType === 'student') return 'article-card card card-student';
+        return 'article-card card';
+    };
+
     return (
-        <article className="article-card card">
+        <article className={getCardClass()}>
+            {/* 来源标签 */}
+            {sourceType === 'teacher' && (
+                <div className="article-source-badge source-teacher">
+                    <span className="source-icon">📚</span>
+                    <span>教师推荐</span>
+                </div>
+            )}
+            {sourceType === 'student' && (
+                <div className="article-source-badge source-student">
+                    <span className="source-icon">✏️</span>
+                    <span>我上传的</span>
+                </div>
+            )}
+
             <div className="article-card-header">
                 <span className={`badge ${getLevelClass()}`}>{level}</span>
                 <span className="article-meta">

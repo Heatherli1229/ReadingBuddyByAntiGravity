@@ -1,82 +1,91 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { articles as initialArticles } from '../data/articles';
 import { useAuth } from './AuthContext';
+import { db } from '../firebase';
+import { collection, doc, setDoc, deleteDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
-// 创建文章上下文
 const ArticleContext = createContext();
 
-// 本地存储的键名
-const STORAGE_KEY = 'ai-reading-buddy-articles';
-
-// 文章提供者组件
 export function ArticleProvider({ children }) {
-    // 从 LocalStorage 加载初始数据，如果没有则使用默认文章
-    const [articles, setArticles] = useState(() => {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            return stored ? JSON.parse(stored) : initialArticles;
-        } catch {
-            return initialArticles;
-        }
-    });
+    const [articles, setArticles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const { currentUser } = useAuth();
 
-    // 当文章列表变化时，保存到 LocalStorage
+    // Listen to articles in Firestore
     useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(articles));
-    }, [articles]);
+        const unsubscribe = onSnapshot(collection(db, 'articles'), (snapshot) => {
+            if (snapshot.empty) {
+                // If database is empty, seed it with the default articles
+                import('../data/articles').then(module => {
+                    const initialArticles = module.articles;
+                    initialArticles.forEach(async (article) => {
+                        await setDoc(doc(db, 'articles', article.id.toString()), article);
+                    });
+                });
+            } else {
+                const loaded = [];
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    // 兼容旧文章：如果缺少 authorRole，根据 authorId 推断
+                    if (!data.authorRole && data.authorId === 'teacher') {
+                        data.authorRole = 'teacher';
+                    }
+                    // 兼容旧文章：如果缺少 createdAt，用 id 推算一个早期时间戳（种子文章排在最后）
+                    if (!data.createdAt) {
+                        data.createdAt = typeof data.id === 'number' ? data.id * 1000 : 0;
+                    }
+                    loaded.push({ id: isNaN(parseInt(docSnap.id, 10)) ? docSnap.id : parseInt(docSnap.id, 10), ...data });
+                });
+                // 按 createdAt 降序排列（最新的在最前）
+                loaded.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                setArticles(loaded);
+            }
+            setLoading(false);
+        });
+        return unsubscribe;
+    }, []);
 
-    // 获取所有文章
     const getAllArticles = () => articles;
 
-    // 根据ID获取文章
-    const getArticleById = (id) => articles.find(article => article.id === parseInt(id));
+    const getArticleById = (id) => articles.find(article => article.id === parseInt(id) || article.id === id);
 
-    // 根据等级筛选文章
     const getArticlesByLevel = (level) => {
         if (!level || level === '全部') return articles;
         return articles.filter(article => article.level === level);
     };
 
-    const { currentUser } = useAuth();
-
-    // 添加文章
-    const addArticle = (article) => {
-        const newId = Math.max(0, ...articles.map(a => a.id)) + 1;
+    const addArticle = async (article) => {
+        const newId = articles.length > 0 ? Math.max(0, ...articles.map(a => typeof a.id === 'number' ? a.id : 0)) + 1 : 1;
         const newArticle = {
             ...article,
             id: newId,
-            authorId: currentUser ? currentUser.id : 'teacher', // fallback just in case
-            characters: article.content.length,
-            estimated_time: `${Math.ceil(article.content.length / 100)}分钟`
+            authorId: currentUser ? currentUser.id : 'teacher',
+            authorRole: currentUser ? currentUser.role : 'teacher',
+            createdAt: Date.now(),
+            characters: article.content ? article.content.length : 0,
+            estimated_time: article.content ? `${Math.ceil(article.content.length / 100)}分钟` : '0分钟'
         };
-        setArticles(prev => [...prev, newArticle]);
+        await setDoc(doc(db, 'articles', newId.toString()), newArticle);
         return newArticle;
     };
 
-    // 更新文章
-    const updateArticle = (id, updates) => {
-        setArticles(prev => prev.map(article => {
-            if (article.id === parseInt(id)) {
-                const updated = { ...article, ...updates };
-                // 自动更新字数和阅读时间
-                if (updates.content) {
-                    updated.characters = updates.content.length;
-                    updated.estimated_time = `${Math.ceil(updates.content.length / 100)}分钟`;
-                }
-                return updated;
-            }
-            return article;
-        }));
+    const updateArticle = async (id, updates) => {
+        const updated = { ...updates };
+        if (updates.content) {
+            updated.characters = updates.content.length;
+            updated.estimated_time = `${Math.ceil(updates.content.length / 100)}分钟`;
+        }
+        await updateDoc(doc(db, 'articles', id.toString()), updated);
     };
 
-    // 删除文章
-    const deleteArticle = (id) => {
-        setArticles(prev => prev.filter(article => article.id !== parseInt(id)));
+    const deleteArticle = async (id) => {
+        await deleteDoc(doc(db, 'articles', id.toString()));
     };
 
-    // 重置为默认文章
     const resetToDefault = () => {
-        setArticles(initialArticles);
+        // Just delete all and it will re-seed
+        articles.forEach(async (a) => {
+            await deleteDoc(doc(db, 'articles', a.id.toString()));
+        });
     };
 
     const value = {
@@ -93,12 +102,11 @@ export function ArticleProvider({ children }) {
 
     return (
         <ArticleContext.Provider value={value}>
-            {children}
+            {!loading && children}
         </ArticleContext.Provider>
     );
 }
 
-// 自定义 Hook 使用文章上下文
 export function useArticles() {
     const context = useContext(ArticleContext);
     if (!context) {

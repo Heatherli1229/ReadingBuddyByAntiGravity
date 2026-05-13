@@ -1,74 +1,63 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { db } from '../firebase';
+import { collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
-// 创建生词库上下文
 const VocabContext = createContext();
 
-// 按用户 ID 生成独立的 localStorage 键名
-const storageKey = (userId) =>
-    userId ? `ai-reading-buddy-vocab-${userId}` : null;
-
-// 读取指定用户的生词列表
-const loadWords = (userId) => {
-    const key = storageKey(userId);
-    if (!key) return [];
-    try {
-        const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) : [];
-    } catch {
-        return [];
-    }
-};
-
-// 生词库提供者组件
 export function VocabProvider({ children }) {
     const { currentUser } = useAuth();
     const userId = currentUser?.id ?? null;
+    const [savedWords, setSavedWords] = useState([]);
 
-    // 初始化：从当前用户的 localStorage slot 加载
-    const [savedWords, setSavedWords] = useState(() => loadWords(userId));
-
-    // 当用户切换（登录/退出/切换账号）时，重新加载对应用户的生词
     useEffect(() => {
-        setSavedWords(loadWords(userId));
+        if (!userId) {
+            setSavedWords([]);
+            return;
+        }
+        
+        const vocabRef = collection(db, 'users', userId, 'vocabulary');
+        const unsubscribe = onSnapshot(vocabRef, (snapshot) => {
+            const loaded = [];
+            snapshot.forEach(docSnap => {
+                loaded.push({ ...docSnap.data(), word: docSnap.id });
+            });
+            setSavedWords(loaded);
+        });
+
+        return unsubscribe;
     }, [userId]);
 
-    // 当生词列表变化时，保存到对应用户的 localStorage
-    useEffect(() => {
-        const key = storageKey(userId);
-        if (key) {
-            localStorage.setItem(key, JSON.stringify(savedWords));
-        }
-    }, [savedWords, userId]);
-
-    // 添加生词
-    const addWord = (word) => {
-        setSavedWords(prev => {
-            const exists = prev.some(w => w.word === word.word);
-            if (exists) return prev;
-            return [...prev, { ...word, addedAt: Date.now() }];
+    const addWord = async (word) => {
+        if (!userId) return;
+        const exists = savedWords.some(w => w.word === word.word);
+        if (exists) return;
+        
+        await setDoc(doc(db, 'users', userId, 'vocabulary', word.word), {
+            ...word,
+            addedAt: Date.now()
         });
     };
 
-    // 移除生词
-    const removeWord = (wordText) => {
-        setSavedWords(prev => prev.filter(w => w.word !== wordText));
+    const removeWord = async (wordText) => {
+        if (!userId) return;
+        await deleteDoc(doc(db, 'users', userId, 'vocabulary', wordText));
     };
 
-    // 检查生词是否已保存
     const isWordSaved = (wordText) => {
         return savedWords.some(w => w.word === wordText);
     };
 
-    // 获取随机生词（用于练习模式）
     const getRandomWords = (count = 1) => {
         const shuffled = [...savedWords].sort(() => Math.random() - 0.5);
         return shuffled.slice(0, Math.min(count, shuffled.length));
     };
 
-    // 清空所有生词
-    const clearAllWords = () => {
-        setSavedWords([]);
+    const clearAllWords = async () => {
+        if (!userId) return;
+        for (const word of savedWords) {
+            await deleteDoc(doc(db, 'users', userId, 'vocabulary', word.word));
+        }
     };
 
     const value = {
@@ -88,7 +77,6 @@ export function VocabProvider({ children }) {
     );
 }
 
-// 自定义 Hook 使用生词库
 export function useVocab() {
     const context = useContext(VocabContext);
     if (!context) {
@@ -98,4 +86,3 @@ export function useVocab() {
 }
 
 export default VocabContext;
-

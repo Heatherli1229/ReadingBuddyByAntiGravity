@@ -7,20 +7,38 @@ import './HomePage.css';
 
 function HomePage() {
     const { getAllArticles, getArticlesByLevel } = useArticles();
-    const { currentUser, isPublicAuthor } = useAuth();
+    const { currentUser, isPublicAuthor, users } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLevel, setSelectedLevel] = useState('全部');
+    const [selectedSource, setSelectedSource] = useState('全部');
+
+    // 判断文章来源类型：teacher 或 student
+    const getSourceType = (article) => {
+        if (!currentUser) return 'teacher';
+        if (isPublicAuthor(article.authorId, article.authorRole)) return 'teacher';
+        if (currentUser && article.authorId === currentUser.id) return 'student';
+        return null;
+    };
 
     // 过滤文章
     const filteredArticles = useMemo(() => {
         let articles = getAllArticles();
 
         // Visibility: show public (teacher/admin authored) + own private articles
-        articles = articles.filter(a => isPublicAuthor(a.authorId) || (currentUser && a.authorId === currentUser.id));
+        articles = articles.filter(a => isPublicAuthor(a.authorId, a.authorRole) || (currentUser && a.authorId === currentUser.id));
+
+        // 按来源筛选
+        if (selectedSource && selectedSource !== '全部') {
+            if (selectedSource === 'teacher') {
+                articles = articles.filter(a => isPublicAuthor(a.authorId, a.authorRole));
+            } else if (selectedSource === 'student') {
+                articles = articles.filter(a => currentUser && a.authorId === currentUser.id);
+            }
+        }
 
         // 按等级筛选
         if (selectedLevel && selectedLevel !== '全部') {
-            articles = getArticlesByLevel(selectedLevel);
+            articles = articles.filter(a => a.level === selectedLevel);
         }
 
         // 按搜索词筛选
@@ -32,7 +50,10 @@ function HomePage() {
         }
 
         return articles;
-    }, [searchQuery, selectedLevel, getAllArticles, getArticlesByLevel, currentUser]);
+    }, [searchQuery, selectedLevel, selectedSource, getAllArticles, currentUser, isPublicAuthor]);
+
+    // 已登录的学生才显示来源筛选（教师和管理员不需要区分自己的文章）
+    const showSourceFilter = !!(currentUser && currentUser.role === 'student');
 
     return (
         <div className="home-page">
@@ -50,6 +71,9 @@ function HomePage() {
                 onSearchChange={setSearchQuery}
                 selectedLevel={selectedLevel}
                 onLevelChange={setSelectedLevel}
+                selectedSource={selectedSource}
+                onSourceChange={setSelectedSource}
+                showSourceFilter={showSourceFilter}
             />
 
             {filteredArticles.length === 0 ? (
@@ -61,7 +85,11 @@ function HomePage() {
             ) : (
                 <div className="articles-grid">
                     {filteredArticles.map(article => (
-                        <ArticleCard key={article.id} article={article} />
+                        <ArticleCard
+                            key={article.id}
+                            article={article}
+                            sourceType={currentUser ? getSourceType(article) : 'teacher'}
+                        />
                     ))}
                 </div>
             )}

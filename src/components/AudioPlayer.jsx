@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { speakArticle, stopSpeaking, pauseSpeaking, resumeSpeaking, isSpeaking, initVoices } from '../utils/tts';
 import './AudioPlayer.css';
 
-function AudioPlayer({ text }) {
+function AudioPlayer({ text, rate = 1, onRateChange }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
-    const [rate, setRate] = useState(1);
     const [isReady, setIsReady] = useState(false);
 
     const rates = [0.75, 1, 1.25, 1.5];
@@ -41,18 +40,15 @@ function AudioPlayer({ text }) {
         }
     };
 
-    const handleStop = () => {
+    const handleRateChange = (newRate) => {
+        if (onRateChange) onRateChange(newRate);
+        
+        // 不管是谁在播放（全文还是段落），统一全局停止，以保证体验一致
         stopSpeaking();
+        
+        // 重置主播放器状态
         setIsPlaying(false);
         setIsPaused(false);
-    };
-
-    const handleRateChange = (newRate) => {
-        setRate(newRate);
-        // 如果正在播放，重新开始
-        if (isPlaying || isPaused) {
-            handleStop();
-        }
     };
 
     if (!isReady) {
@@ -72,15 +68,6 @@ function AudioPlayer({ text }) {
                     aria-label={isPlaying ? '暂停' : '播放'}
                 >
                     {isPlaying ? '⏸️' : isPaused ? '▶️' : '▶️'}
-                </button>
-
-                <button
-                    className="btn btn-icon btn-ghost stop-btn"
-                    onClick={handleStop}
-                    disabled={!isPlaying && !isPaused}
-                    aria-label="停止"
-                >
-                    ⏹️
                 </button>
 
                 <div className="player-status">

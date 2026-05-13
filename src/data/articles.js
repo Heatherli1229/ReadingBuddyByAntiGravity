@@ -6,6 +6,7 @@ export const articles = [
         title_en: "My Family",
         level: "初级",
         authorId: "teacher",
+        authorRole: "teacher",
         characters: 180,
         estimated_time: "2分钟",
         content: `我叫小明。我的家有四口人：爸爸、妈妈、姐姐和我。
@@ -30,6 +31,8 @@ export const articles = [
         title_cn: "一天的开始",
         title_en: "The Start of a Day",
         level: "初级",
+        authorId: "teacher",
+        authorRole: "teacher",
         characters: 220,
         estimated_time: "2分钟",
         content: `每天早上六点半，我的闹钟响了。我慢慢地睁开眼睛，开始新的一天。
@@ -54,6 +57,8 @@ export const articles = [
         title_cn: "四季的变化",
         title_en: "The Changes of Four Seasons",
         level: "中级",
+        authorId: "teacher",
+        authorRole: "teacher",
         characters: 380,
         estimated_time: "4分钟",
         content: `中国有四个季节：春天、夏天、秋天和冬天。每个季节都有自己的特点和美丽。
@@ -83,6 +88,8 @@ export const articles = [
         title_cn: "人工智能与未来",
         title_en: "Artificial Intelligence and the Future",
         level: "高级",
+        authorId: "teacher",
+        authorRole: "teacher",
         characters: 520,
         estimated_time: "6分钟",
         content: `人工智能（AI）是当今世界最热门的技术之一。它正在改变我们的生活方式，影响着各行各业。
@@ -118,6 +125,8 @@ export const articles = [
         title_cn: "我的爱好",
         title_en: "My Hobbies",
         level: "初级",
+        authorId: "teacher",
+        authorRole: "teacher",
         characters: 200,
         estimated_time: "2分钟",
         content: `每个人都有自己的爱好。我的爱好是画画和听音乐。

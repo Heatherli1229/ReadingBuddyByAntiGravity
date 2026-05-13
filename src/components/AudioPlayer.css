@@ -46,14 +46,6 @@
     box-shadow: var(--shadow-lg), var(--shadow-glow);
 }
 
-.stop-btn {
-    font-size: 1.25rem;
-}
-
-.stop-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
 
 .player-status {
     font-size: var(--font-size-sm);

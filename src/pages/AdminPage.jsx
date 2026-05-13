@@ -16,26 +16,30 @@ function AdminPage() {
     }
 
     // Create user form state
-    const [form, setForm] = useState({ username: '', password: '', role: 'student' });
+    const [form, setForm] = useState({ email: '', displayName: '', password: '', role: 'student' });
     const [createMsg, setCreateMsg] = useState(null);
 
     // Reset-password dialog state
-    const [resetTarget, setResetTarget] = useState(null);   // user object
-    const [resetPwd, setResetPwd] = useState('');
+    const [resetTarget, setResetTarget] = useState(null);
     const [resetMsg, setResetMsg] = useState(null);
 
     /* ── Create user ──────────────────────────── */
-    const handleCreate = (e) => {
+    const handleCreate = async (e) => {
         e.preventDefault();
         setCreateMsg(null);
-        if (!form.username.trim() || !form.password) {
-            setCreateMsg({ type: 'error', text: '用户名和密码不能为空' });
+        if (!form.email.trim() || !form.password) {
+            setCreateMsg({ type: 'error', text: '邮箱和密码不能为空' });
             return;
         }
-        const result = adminCreateUser(form.username.trim(), form.password, form.role);
+        if (!form.email.includes('@')) {
+            setCreateMsg({ type: 'error', text: '请输入有效的邮箱地址' });
+            return;
+        }
+        const result = await adminCreateUser(form.email.trim(), form.password, form.role, form.displayName.trim());
         if (result.success) {
-            setCreateMsg({ type: 'success', text: `账号「${form.username}」创建成功！` });
-            setForm({ username: '', password: '', role: 'student' });
+            const label = form.displayName.trim() || form.email.split('@')[0];
+            setCreateMsg({ type: 'success', text: `账号「${label}」创建成功！` });
+            setForm({ email: '', displayName: '', password: '', role: 'student' });
         } else {
             setCreateMsg({ type: 'error', text: result.error });
         }
@@ -48,14 +52,14 @@ function AdminPage() {
     };
 
     /* ── Reset password ───────────────────────── */
-    const handleResetSubmit = (e) => {
+    const handleResetSubmit = async (e) => {
         e.preventDefault();
         setResetMsg(null);
-        const result = adminResetPassword(resetTarget.id, resetPwd);
+        const result = await adminResetPassword(resetTarget.id);
         if (result.success) {
-            setResetMsg({ type: 'success', text: '密码已重置！' });
-            setResetPwd('');
-            setTimeout(() => { setResetTarget(null); setResetMsg(null); }, 1500);
+            const email = resetTarget.email || `${resetTarget.username}@readingbuddy.local`;
+            setResetMsg({ type: 'success', text: `密码重置邮件已发送至「${email}」，请通知用户查收件筒。` });
+            setTimeout(() => { setResetTarget(null); setResetMsg(null); }, 3000);
         } else {
             setResetMsg({ type: 'error', text: result.error });
         }
@@ -77,7 +81,8 @@ function AdminPage() {
                 <table className="user-table">
                     <thead>
                         <tr>
-                            <th>用户名</th>
+                            <th>显示名</th>
+                            <th>登录邮箱</th>
                             <th>角色</th>
                             <th>操作</th>
                         </tr>
@@ -86,8 +91,11 @@ function AdminPage() {
                         {sorted.map(u => (
                             <tr key={u.id} className={u.id === currentUser.id ? 'current-user-row' : ''}>
                                 <td>
-                                    <span className="username-cell">{u.username}</span>
+                                    <span className="username-cell">{u.displayName || u.username}</span>
                                     {u.id === currentUser.id && <span className="self-tag">（当前）</span>}
+                                </td>
+                                <td>
+                                    <span className="email-cell">{u.email || `${u.username}@readingbuddy.local`}</span>
                                 </td>
                                 <td>
                                     <span className={`role-badge role-${u.role}`}>
@@ -128,16 +136,22 @@ function AdminPage() {
                 )}
                 <form onSubmit={handleCreate} className="create-form">
                     <div className="form-group">
-                        <label>用户名</label>
-                        <input className="input" type="text" value={form.username}
-                            onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-                            placeholder="请输入用户名" />
+                        <label>登录邮箱 <span className="form-required">*</span></label>
+                        <input className="input" type="email" value={form.email}
+                            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                            placeholder="请输入邮箱地址" />
                     </div>
                     <div className="form-group">
-                        <label>初始密码</label>
+                        <label>显示名 <span className="form-hint">（选填，默认取邮箱前缀）</span></label>
+                        <input className="input" type="text" value={form.displayName}
+                            onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
+                            placeholder="请输入显示名" />
+                    </div>
+                    <div className="form-group">
+                        <label>初始密码 <span className="form-required">*</span></label>
                         <input className="input" type="text" value={form.password}
                             onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                            placeholder="请输入初始密码" />
+                            placeholder="至少6位" />
                     </div>
                     <div className="form-group">
                         <label>账号角色</label>
@@ -159,21 +173,19 @@ function AdminPage() {
             {resetTarget && (
                 <div className="modal-overlay" onClick={() => setResetTarget(null)}>
                     <div className="modal-card" onClick={e => e.stopPropagation()}>
-                        <h3>重置密码 — {resetTarget.username}</h3>
+                        <h3>🔑 重置密码 — {resetTarget.displayName || resetTarget.username}</h3>
+                        <p className="reset-email-note">
+                            将向该用户的注册邮箱发送密码重置链接：<br/>
+                            <strong>{resetTarget.email || `${resetTarget.username}@readingbuddy.local`}</strong>
+                        </p>
                         {resetMsg && (
                             <div className={`admin-msg admin-msg-${resetMsg.type}`}>{resetMsg.text}</div>
                         )}
                         <form onSubmit={handleResetSubmit}>
-                            <div className="form-group">
-                                <label>新密码</label>
-                                <input className="input" type="text" value={resetPwd}
-                                    onChange={e => setResetPwd(e.target.value)}
-                                    placeholder="至少3个字符" autoFocus />
-                            </div>
                             <div className="modal-actions">
                                 <button type="button" className="btn btn-ghost"
                                     onClick={() => setResetTarget(null)}>取消</button>
-                                <button type="submit" className="btn btn-primary">确认重置</button>
+                                <button type="submit" className="btn btn-primary">📧 发送重置邮件</button>
                             </div>
                         </form>
                     </div>

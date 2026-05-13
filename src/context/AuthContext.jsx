@@ -1,139 +1,214 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { auth, secondaryAuth, db } from '../firebase';
+import { 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut, 
+    onAuthStateChanged,
+    updatePassword,
+    sendPasswordResetEmail,
+    EmailAuthProvider,
+    reauthenticateWithCredential
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
-const AUTH_KEY = 'ai-reading-buddy-auth';
-const USERS_KEY = 'ai-reading-buddy-users';
-
-// Hardcoded admin account - always available
-const ADMIN_USER = {
-    id: 'admin',
-    username: 'admin',
-    password: 'admin123',
-    role: 'admin',
-    displayName: '系统管理员'
-};
-
-function loadUsers() {
-    try {
-        const stored = localStorage.getItem(USERS_KEY);
-        if (stored) {
-            const users = JSON.parse(stored);
-            // Always ensure admin is present
-            if (!users.find(u => u.id === 'admin')) {
-                users.unshift(ADMIN_USER);
-            }
-            return users;
-        }
-    } catch { /* fall through */ }
-    return [ADMIN_USER];
-}
-
 export function AuthProvider({ children }) {
-    const [currentUser, setCurrentUser] = useState(() => {
-        try {
-            const stored = localStorage.getItem(AUTH_KEY);
-            return stored ? JSON.parse(stored) : null;
-        } catch { return null; }
-    });
+    const [currentUser, setCurrentUser] = useState(null);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const [users, setUsers] = useState(loadUsers);
-
+    // Watch auth state
     useEffect(() => {
-        if (currentUser) localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser));
-        else localStorage.removeItem(AUTH_KEY);
-    }, [currentUser]);
-
-    useEffect(() => {
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }, [users]);
-
-    // Keep currentUser in sync if the user record changes (e.g. password reset)
-    useEffect(() => {
-        if (currentUser) {
-            const updated = users.find(u => u.id === currentUser.id);
-            if (updated && JSON.stringify(updated) !== JSON.stringify(currentUser)) {
-                setCurrentUser(updated);
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            if (firebaseUser) {
+                try {
+                    // Fetch extra user details from firestore
+                    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+                    if (userDoc.exists()) {
+                        setCurrentUser({ id: firebaseUser.uid, ...userDoc.data(), email: firebaseUser.email });
+                    } else {
+                        // Fallback
+                        const fallbackUser = { id: firebaseUser.uid, email: firebaseUser.email, role: 'student', username: firebaseUser.email.split('@')[0] };
+                        await setDoc(doc(db, 'users', firebaseUser.uid), fallbackUser);
+                        setCurrentUser(fallbackUser);
+                    }
+                } catch (err) {
+                    console.error("获取 Firestore 用户信息失败 (数据库未开启或权限不足):", err);
+                    // 本地临时 fallback: 以确保持续未配置数据库时也能试用
+                    const mockRole = firebaseUser.email.startsWith("admin@") ? "admin" : "student";
+                    setCurrentUser({ id: firebaseUser.uid, email: firebaseUser.email, role: mockRole, username: firebaseUser.email.split('@')[0] });
+                }
+            } else {
+                setCurrentUser(null);
             }
+            setLoading(false);
+        });
+        return unsubscribe;
+    }, []);
+
+    const fetchUsers = async () => {
+        try {
+            const querySnapshot = await getDocs(collection(db, 'users'));
+            const usersList = [];
+            querySnapshot.forEach(doc => {
+                usersList.push({ id: doc.id, ...doc.data() });
+            });
+            setUsers(usersList);
+        } catch (err) {
+            // Firestore 权限不足时（未登录）不应崩溃
+            console.warn('无法加载用户列表（可能需要登录）', err.code);
         }
-    }, [users]);
-
-    /* ── Auth actions ─────────────────────────────────────────── */
-
-    const login = (username, password) => {
-        const user = users.find(u => u.username === username && u.password === password);
-        if (user) { setCurrentUser(user); return { success: true }; }
-        return { success: false, error: '用户名或密码错误' };
     };
 
-    const register = (username, password) => {
-        if (users.some(u => u.username === username))
-            return { success: false, error: '用户名已被注册' };
+    // users 列表用于判断文章作者角色，未登录时同样需要
+    // （历史文章没有 authorRole 字段，需要通过 users 列表回退查找）
+    useEffect(() => {
+        fetchUsers();
+    }, []); // 仅在挂载时加载一次即可
 
-        const newUser = {
-            id: `student_${Date.now()}`,
-            username,
-            password,
-            role: 'student',
-            displayName: username
-        };
-        setUsers(prev => [...prev, newUser]);
-        setCurrentUser(newUser);
-        return { success: true };
+    const login = async (email, password) => {
+        // 支持真实邮箱登录；对旧账号（原始用户名）保留尾缀兼容
+        const resolvedEmail = email.includes('@') ? email : `${email}@readingbuddy.local`;
+        try {
+            await signInWithEmailAndPassword(auth, resolvedEmail, password);
+            return { success: true };
+        } catch (error) {
+            let msg = '邮箱或密码错误';
+            if (error.code === 'auth/user-not-found') msg = '该邮箱未注册';
+            if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') msg = '邮箱或密码错误';
+            if (error.code === 'auth/too-many-requests') msg = '登录尝试次数过多，请稍后再试或重置密码';
+            return { success: false, error: msg };
+        }
     };
 
-    const logout = () => setCurrentUser(null);
-
-    /* ── Self-service password change ────────────────────────── */
-
-    const changePassword = (oldPassword, newPassword) => {
-        if (!currentUser) return { success: false, error: '未登录' };
-        if (currentUser.password !== oldPassword)
-            return { success: false, error: '当前密码不正确' };
-        if (!newPassword || newPassword.length < 3)
-            return { success: false, error: '新密码至少需要3个字符' };
-
-        const updated = { ...currentUser, password: newPassword };
-        setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
-        setCurrentUser(updated);
-        return { success: true };
+    const register = async (email, password, displayName) => {
+        if (!email.includes('@')) {
+            return { success: false, error: '请输入有效的邮箱地址' };
+        }
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+            const username = displayName || email.split('@')[0];
+            await setDoc(doc(db, 'users', user.uid), {
+                username,
+                email,
+                role: 'student',
+                displayName: username
+            });
+            return { success: true };
+        } catch (error) {
+            let msg = error.message;
+            if (error.code === 'auth/email-already-in-use') msg = '该邮箱已被注册，请直接登录';
+            if (error.code === 'auth/weak-password') msg = '密码长度至少6位';
+            if (error.code === 'auth/invalid-email') msg = '邮箱格式不正确';
+            return { success: false, error: msg };
+        }
     };
 
-    /* ── Admin-only user management ──────────────────────────── */
-
-    const adminCreateUser = (username, password, role) => {
-        if (users.some(u => u.username === username))
-            return { success: false, error: '用户名已存在' };
-        const newUser = {
-            id: `${role}_${Date.now()}`,
-            username,
-            password,
-            role,
-            displayName: username
-        };
-        setUsers(prev => [...prev, newUser]);
-        return { success: true };
+    const resetPassword = async (email) => {
+        if (!email.includes('@')) {
+            return { success: false, error: '请输入有效的邮箱地址' };
+        }
+        try {
+            await sendPasswordResetEmail(auth, email);
+            return { success: true };
+        } catch (error) {
+            let msg = '发送失败，请检查邮箱是否正确';
+            if (error.code === 'auth/user-not-found') msg = '该邮箱未注册';
+            if (error.code === 'auth/invalid-email') msg = '邮箱格式不正确';
+            return { success: false, error: msg };
+        }
     };
 
-    const adminDeleteUser = (userId) => {
-        if (userId === 'admin') return { success: false, error: '不能删除管理员账号' };
-        setUsers(prev => prev.filter(u => u.id !== userId));
-        return { success: true };
+    const logout = async () => {
+        await signOut(auth);
     };
 
-    const adminResetPassword = (userId, newPassword) => {
-        if (!newPassword || newPassword.length < 3)
-            return { success: false, error: '密码至少需要3个字符' };
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, password: newPassword } : u));
-        return { success: true };
+    const changePassword = async (oldPassword, newPassword) => {
+        if (!auth.currentUser) return { success: false, error: '未登录' };
+        try {
+            const credential = EmailAuthProvider.credential(auth.currentUser.email, oldPassword);
+            await reauthenticateWithCredential(auth.currentUser, credential);
+            await updatePassword(auth.currentUser, newPassword);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: '密码错误或修改失败' };
+        }
     };
 
-    /* ── Public article rule: teacher OR admin authored ──────── */
-    // Articles with authorId 'teacher' or 'admin' or any user with role teacher/admin are public.
-    // We expose a helper consumed by HomePage.
-    const isPublicAuthor = (authorId) => {
+    const adminCreateUser = async (email, password, role, displayName) => {
+        if (!email.includes('@')) {
+            return { success: false, error: '请输入有效的邮箱地址' };
+        }
+        try {
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+            const user = userCredential.user;
+            const username = displayName || email.split('@')[0];
+            await setDoc(doc(db, 'users', user.uid), {
+                username,
+                email,
+                role,
+                displayName: username
+            });
+            await signOut(secondaryAuth);
+            await fetchUsers();
+            return { success: true };
+        } catch (error) {
+            let msg = error.message;
+            if (error.code === 'auth/email-already-in-use') msg = '该邮箱已被注册';
+            if (error.code === 'auth/weak-password') msg = '密码长度至少6位';
+            if (error.code === 'auth/invalid-email') msg = '邮箱格式不正确';
+            return { success: false, error: msg };
+        }
+    };
+
+    const adminDeleteUser = async (userId) => {
+        try {
+            // Delete the metadata from firestore. The real Auth account remains, but is disassociated.
+            await deleteDoc(doc(db, 'users', userId));
+            await fetchUsers();
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    };
+
+    // 管理员代劳发送密码重置邮件（不需要知道旧密码）
+    const adminResetPassword = async (userId) => {
+        try {
+            const userDocRef = doc(db, 'users', userId);
+            const userDocSnap = await getDoc(userDocRef);
+            if (!userDocSnap.exists()) {
+                return { success: false, error: '用户不存在' };
+            }
+            const userData = userDocSnap.data();
+            // 优先使用 Firestore 存储的 email 字段
+            const email = userData.email || (userData.username?.includes('@') ? userData.username : `${userData.username}@readingbuddy.local`);
+            await sendPasswordResetEmail(auth, email);
+            return { success: true };
+        } catch (error) {
+            let msg = '发送失败，请检查用户邮箱是否正确';
+            if (error.code === 'auth/user-not-found') msg = '该用户在 Firebase 中不存在';
+            if (error.code === 'auth/invalid-email') msg = '用户邮箱格式不正确';
+            return { success: false, error: msg };
+        }
+    };
+
+    // 判断文章是否是公开作者（教师/管理员）上传的
+    const isPublicAuthor = (authorId, authorRole) => {
+        // 1️⃣ 文章自带 authorRole 字段（新文章）
+        if (authorRole) {
+            return authorRole === 'teacher' || authorRole === 'admin';
+        }
+        // 2️⃣ 旧种子数据：authorId 就是字符串 'teacher'
+        if (authorId === 'teacher') return true;
+        // 3️⃣ 历史文章：通过 users 列表回退查找
         const author = users.find(u => u.id === authorId);
-        return author ? (author.role === 'teacher' || author.role === 'admin') : false;
+        if (author) return author.role === 'teacher' || author.role === 'admin';
+        // 4️⃣ users 列表为空（未登录且 Firestore 读取失败）→默认隐藏此文章
+        return false;
     };
 
     const value = {
@@ -144,15 +219,21 @@ export function AuthProvider({ children }) {
         isTeacher: currentUser?.role === 'teacher' || currentUser?.role === 'admin',
         login,
         register,
+        resetPassword,
         logout,
         changePassword,
         adminCreateUser,
         adminDeleteUser,
         adminResetPassword,
         isPublicAuthor,
+        loading
     };
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={value}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
 }
 
 export function useAuth() {

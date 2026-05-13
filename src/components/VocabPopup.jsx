@@ -52,7 +52,7 @@ function VocabPopup({ word, onClose }) {
                         <span className="definition-text popup-hsk-badge" style={{ 
                             backgroundColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 15%, transparent)`,
                             color: `var(--color-hsk-${hskLevel})`
-                        }}>HSK {hskLevel} 级</span>
+                        }}>{hskLevel === 'Non-HSK' ? 'Non-HSK' : `HSK ${hskLevel} 级`}</span>
                     </div>
                 </div>
 

@@ -326,6 +326,7 @@ function TeacherPage() {
                                                 <option value="5">HSK 5</option>
                                                 <option value="6">HSK 6</option>
                                                 <option value="7-9">HSK 7-9</option>
+                                                <option value="Non-HSK">Non-HSK</option>
                                             </select>
                                         </div>
                                         <button

@@ -2,6 +2,10 @@
 // 包含拼音和中英文释义（自动生成自 HSK 2025 大纲 和 CC-CEDICT）
 
 export const VOCABULARY_DATABASE = {
+    '马拉松': { pinyin: 'mǎ lā sōng', en: 'marathon', cn: '马拉松长跑，比喻一项需要持久努力的活动' },
+    '新华社': { pinyin: 'xīn huá shè', en: 'Xinhua News Agency', cn: '新华通讯社，中国官方的新闻机构' },
+    '机器人': { pinyin: 'jī qì rén', en: 'robot', cn: '自动控制的机器，模仿人类行为的机器' },
+    '续航': { pinyin: 'xù háng', en: 'endurance; battery life', cn: '连续航行或工作的时间' },
     '1': { pinyin: '1', en: '', cn: '' },
     '2': { pinyin: '2', en: '', cn: '' },
     '4': { pinyin: '4', en: '', cn: '' },

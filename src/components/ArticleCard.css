@@ -3,6 +3,95 @@
     flex-direction: column;
     gap: var(--spacing-3);
     height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 教师文章卡片 - 琰珀金色风格 */
+.card-teacher {
+    background: linear-gradient(145deg, #FFFBF0 0%, #FFFFFF 60%);
+    border-left: 4px solid #F59E0B;
+    box-shadow: var(--shadow-md), 0 0 0 1px rgba(245, 158, 11, 0.1);
+}
+
+.card-teacher:hover {
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(245, 158, 11, 0.2), 0 0 20px rgba(245, 158, 11, 0.12);
+    transform: translateY(-4px);
+}
+
+.card-teacher .article-title-cn {
+    color: #92400E;
+}
+
+.card-teacher:hover .article-title-cn {
+    color: #78350F;
+}
+
+.card-teacher .article-btn {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+}
+
+.card-teacher .article-btn:hover {
+    box-shadow: var(--shadow-lg), 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+/* 学生文章卡片 - 蓝紫色风格 */
+.card-student {
+    background: linear-gradient(145deg, #F0F4FF 0%, #FFFFFF 60%);
+    border-left: 4px solid #6366F1;
+    box-shadow: var(--shadow-md), 0 0 0 1px rgba(99, 102, 241, 0.1);
+}
+
+.card-student:hover {
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(99, 102, 241, 0.2), 0 0 20px rgba(99, 102, 241, 0.12);
+    transform: translateY(-4px);
+}
+
+.card-student .article-title-cn {
+    color: #312E81;
+}
+
+.card-student:hover .article-title-cn {
+    color: #1E1B4B;
+}
+
+.card-student .article-btn {
+    background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+}
+
+.card-student .article-btn:hover {
+    box-shadow: var(--shadow-lg), 0 0 20px rgba(99, 102, 241, 0.4);
+}
+
+/* 来源标签 */
+.article-source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    margin-bottom: var(--spacing-2);
+    width: fit-content;
+}
+
+.source-teacher {
+    background: rgba(245, 158, 11, 0.12);
+    color: #B45309;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.source-student {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4338CA;
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.source-icon {
+    font-size: 0.8rem;
 }
 
 .article-card-header {
@@ -37,6 +126,7 @@
     color: var(--color-gray-800);
     line-height: var(--line-height-tight);
     margin-top: var(--spacing-2);
+    transition: color var(--transition-fast);
 }
 
 .article-title-en {
@@ -61,14 +151,15 @@
     margin-top: auto;
     width: 100%;
     text-align: center;
+    transition: all var(--transition-normal);
 }
 
-/* 悬浮效果 */
-.article-card:hover .article-title-cn {
+/* 默认卡片悬浮效果 */
+.article-card:not(.card-teacher):not(.card-student):hover .article-title-cn {
     color: var(--color-primary-dark);
 }
 
-.article-card:hover .article-btn {
+.article-card:not(.card-teacher):not(.card-student):hover .article-btn {
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg), var(--shadow-glow);
 }

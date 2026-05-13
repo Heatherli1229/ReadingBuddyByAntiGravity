@@ -15,6 +15,7 @@ function ReadingPage() {
     const article = getArticleById(id);
     const { addWord, isWordSaved } = useVocab();
     const [selectedWord, setSelectedWord] = useState(null);
+    const [playbackRate, setPlaybackRate] = useState(1);
 
     // 如果文章不存在
     if (!article) {
@@ -110,7 +111,7 @@ function ReadingPage() {
                         }
                         return <span key={index}>{part}</span>;
                     })}
-                    <ParagraphAudioButton text={paragraph} />
+                    <ParagraphAudioButton text={paragraph} rate={playbackRate} />
                 </p>
             );
         });
@@ -154,7 +155,11 @@ function ReadingPage() {
             </div>
 
             {/* 音频播放器 */}
-            <AudioPlayer text={article.content} />
+            <AudioPlayer 
+                text={article.content} 
+                rate={playbackRate} 
+                onRateChange={setPlaybackRate} 
+            />
 
             {/* 文章内容区 */}
             <article className="reading-content card">
@@ -188,7 +193,7 @@ function ReadingPage() {
                                         backgroundColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 15%, transparent)`,
                                         color: `var(--color-hsk-${hskLevel})`
                                     }}>
-                                        HSK {hskLevel} 级
+                                        {hskLevel === 'Non-HSK' ? 'Non-HSK' : `HSK ${hskLevel} 级`}
                                     </p>
                                 </div>
                                 <div className="vocab-card-actions">
