@@ -1,21 +1,36 @@
-// 智能生词识别系统 v3 (基于HSK 2025大纲)
-// 根据文章等级动态决定哪些词被标记为生词
+// 智能生词识别系统 v4 (基于 jieba-wasm + HSK 2025大纲)
+// 使用 jieba 中文分词引擎替代正向最大匹配算法
 
 import { 
     HSK_LEVEL_1, HSK_LEVEL_2, HSK_LEVEL_3, HSK_LEVEL_4, 
     HSK_LEVEL_5, HSK_LEVEL_6, HSK_LEVEL_7_9 
 } from '../data/hskVocab';
 import { VOCABULARY_DATABASE } from '../data/vocabDefinitions';
+import { initJieba, segmentText, isJiebaReady } from './jiebaService';
 
+// ===== HSK 词汇映射表 =====
 export const HSK_VOCAB_MAP = new Map();
 
-for (const w of HSK_LEVEL_1) HSK_VOCAB_MAP.set(w, '1');
-for (const w of HSK_LEVEL_2) HSK_VOCAB_MAP.set(w, '2');
-for (const w of HSK_LEVEL_3) HSK_VOCAB_MAP.set(w, '3');
-for (const w of HSK_LEVEL_4) HSK_VOCAB_MAP.set(w, '4');
-for (const w of HSK_LEVEL_5) HSK_VOCAB_MAP.set(w, '5');
-for (const w of HSK_LEVEL_6) HSK_VOCAB_MAP.set(w, '6');
-for (const w of HSK_LEVEL_7_9) HSK_VOCAB_MAP.set(w, '7-9');
+// 构建 HSK 词汇 → 等级 映射
+const hskSets = [
+    { set: HSK_LEVEL_1, level: '1' },
+    { set: HSK_LEVEL_2, level: '2' },
+    { set: HSK_LEVEL_3, level: '3' },
+    { set: HSK_LEVEL_4, level: '4' },
+    { set: HSK_LEVEL_5, level: '5' },
+    { set: HSK_LEVEL_6, level: '6' },
+    { set: HSK_LEVEL_7_9, level: '7-9' },
+];
+
+for (const { set, level } of hskSets) {
+    for (const w of set) {
+        // 清理数字后缀标注（如 "两1" → "两"，"会1" → "会"）
+        const cleanWord = w.replace(/\d+$/, '');
+        if (cleanWord.length > 0) {
+            HSK_VOCAB_MAP.set(cleanWord, level);
+        }
+    }
+}
 
 /**
  * 判断是否为汉字
@@ -24,11 +39,11 @@ function isChinese(char) {
     return /[\u4e00-\u9fa5]/.test(char);
 }
 
-const allKnownWordsSet = new Set(HSK_VOCAB_MAP.keys());
-for (const w in VOCABULARY_DATABASE) {
-    if (!allKnownWordsSet.has(w) && isChinese(w)) {
-        HSK_VOCAB_MAP.set(w, 'Non-HSK');
-    }
+/**
+ * 判断一个词语是否包含至少一个汉字
+ */
+function containsChinese(word) {
+    return /[\u4e00-\u9fa5]/.test(word);
 }
 
 /**
@@ -63,55 +78,52 @@ function shouldBeVocab(hskLevel, articleLevel) {
 }
 
 /**
- * 智能识别文章中的生词 - 使用正向最大匹配算法 (Forward Maximum Matching)
- * 首先用完整的HSK词库对文本进行分词，避免“复杂”中的“杂”被单独识别。
+ * 智能识别文章中的生词 - 使用 jieba 分词引擎
  * @param {string} content 文章内容
  * @param {string} level 文章等级：入门级/初级/中级/高级
- * @returns {Array} 生词列表
+ * @returns {Promise<Array>} 生词列表
  */
-export function autoDetectVocabulary(content, level) {
+export async function autoDetectVocabulary(content, level) {
+    // 确保 jieba 已初始化
+    await initJieba();
+
     const vocabularyMap = new Map();
     
-    const allKnownWords = Array.from(HSK_VOCAB_MAP.keys());
-    let maxLength = 0;
-    for (const word of allKnownWords) {
-        if (word.length > maxLength) maxLength = word.length;
-    }
-
-    let i = 0;
-    while (i < content.length) {
-        let matched = false;
-        for (let len = Math.min(maxLength, content.length - i); len > 0; len--) {
-            const str = content.substring(i, i + len);
-            if (HSK_VOCAB_MAP.has(str)) {
-                const hskLevel = HSK_VOCAB_MAP.get(str);
-                
-                if (shouldBeVocab(hskLevel, level)) {
-                    if (!vocabularyMap.has(str)) {
-                        const def = getWordDefinition(str) || {};
-                        vocabularyMap.set(str, {
-                            word: str,
-                            hskLevel,
-                            pinyin: def.pinyin || '',
-                            en: def.en || '',
-                            cn: def.cn || ''
-                        });
-                    }
-                }
-                
-                i += len;
-                matched = true;
-                break;
-            }
+    // 使用 jieba 分词
+    const segments = segmentText(content);
+    
+    for (const word of segments) {
+        // 跳过非中文词（标点、空格、数字等）
+        if (!containsChinese(word)) continue;
+        
+        // 查找 HSK 等级
+        let hskLevel = HSK_VOCAB_MAP.get(word);
+        
+        // 如果在 HSK 词库中找不到，且是多字词，标记为 Non-HSK
+        if (!hskLevel && word.length >= 2) {
+            hskLevel = 'Non-HSK';
         }
         
-        if (!matched) {
-            i += 1;
+        // 单字且不在 HSK 词库中 → 跳过（减少噪音）
+        if (!hskLevel) continue;
+
+        if (shouldBeVocab(hskLevel, level)) {
+            if (!vocabularyMap.has(word)) {
+                const def = getWordDefinition(word) || {};
+                vocabularyMap.set(word, {
+                    word,
+                    hskLevel,
+                    pinyin: def.pinyin || '',
+                    en: def.en || '',
+                    cn: def.cn || ''
+                });
+            }
         }
     }
 
     const vocabulary = Array.from(vocabularyMap.values());
 
+    // 按 HSK 等级排序
     vocabulary.sort((a, b) => {
         const levelA = a.hskLevel === 'Non-HSK' ? 8 : (a.hskLevel === '7-9' ? 7 : parseInt(a.hskLevel));
         const levelB = b.hskLevel === 'Non-HSK' ? 8 : (b.hskLevel === '7-9' ? 7 : parseInt(b.hskLevel));
@@ -119,6 +131,20 @@ export function autoDetectVocabulary(content, level) {
     });
 
     return vocabulary;
+}
+
+/**
+ * 使用 jieba 对段落文本进行分词（用于阅读页面渲染）
+ * 返回分词结果数组
+ * @param {string} text 段落文本
+ * @returns {string[]} 分词结果
+ */
+export function segmentParagraph(text) {
+    if (!isJiebaReady()) {
+        // jieba 未就绪时，回退到逐字符切分
+        return [...text];
+    }
+    return segmentText(text);
 }
 
 /**
@@ -139,11 +165,11 @@ export function getWordHskLevel(word) {
 /**
  * 分析文章难度（基于HSK词汇等级分布）
  */
-export function analyzeArticleDifficulty(content) {
+export async function analyzeArticleDifficulty(content) {
     const chars = [...content].filter(isChinese);
     if (chars.length === 0) return { level: '入门级', stats: {} };
 
-    const wordsFound = autoDetectVocabulary(content, '入门级');
+    const wordsFound = await autoDetectVocabulary(content, '入门级');
     
     let highestLevel = 1;
     for (const w of wordsFound) {
