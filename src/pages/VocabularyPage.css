@@ -8,7 +8,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--spacing-4);
-    margin-bottom: var(--spacing-8);
+    margin-bottom: var(--spacing-6);
 }
 
 @media (min-width: 640px) {
@@ -44,6 +44,94 @@
 .vocab-header-actions {
     display: flex;
     gap: var(--spacing-2);
+}
+
+/* 进度卡片 */
+.vocab-progress-card {
+    background: var(--color-white, #ffffff);
+    border: 1px solid var(--color-gray-200, #e2e8f0);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.vocab-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.progress-title {
+    font-weight: 600;
+    color: var(--color-gray-800);
+}
+
+.progress-info {
+    color: var(--color-gray-600);
+}
+
+.progress-info strong {
+    color: #10b981;
+}
+
+.vocab-progress-bg {
+    height: 10px;
+    background: var(--color-gray-100, #f1f5f9);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.vocab-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+/* 切页 Tabs */
+.vocab-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-gray-200, #e2e8f0);
+    padding-bottom: 8px;
+}
+
+.vocab-tab {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-md, 8px);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-gray-500);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.vocab-tab:hover {
+    color: var(--color-gray-800);
+    background: var(--color-gray-100, #f1f5f9);
+}
+
+.vocab-tab.active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    font-weight: 600;
+}
+
+.empty-sub-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--color-gray-500);
+    font-size: 0.95rem;
+    background: var(--color-gray-50, #f8fafc);
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--color-gray-200);
+    margin-bottom: 2rem;
 }
 
 /* Flashcard 网格 */

@@ -7,16 +7,27 @@ import { speakWord } from '../utils/tts';
 import './VocabularyPage.css';
 
 function VocabularyPage() {
-    const { savedWords, getRandomWords, wordCount, clearAllWords } = useVocab();
+    const { 
+        savedWords, 
+        unmasteredWords, 
+        masteredWords, 
+        getRandomWords, 
+        wordCount, 
+        masteredCount,
+        unmasteredCount,
+        clearAllWords 
+    } = useVocab();
+
+    const [activeTab, setActiveTab] = useState('unmastered'); // 'unmastered' | 'mastered' | 'all'
     const [isPracticing, setIsPracticing] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [practiceWords, setPracticeWords] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
-    // 开始练习
+    // 开始练习（优先复习未学会的生词）
     const startPractice = () => {
         if (wordCount === 0) return;
-        const words = getRandomWords(wordCount);
+        const words = getRandomWords(wordCount, false);
         setPracticeWords(words);
         setCurrentIndex(0);
         setIsPracticing(true);
@@ -27,7 +38,6 @@ function VocabularyPage() {
         if (currentIndex < practiceWords.length - 1) {
             setCurrentIndex(currentIndex + 1);
         } else {
-            // 练习完成
             setIsPracticing(false);
         }
     };
@@ -38,6 +48,15 @@ function VocabularyPage() {
         setPracticeWords([]);
         setCurrentIndex(0);
     };
+
+    // 当前切页的词汇数组
+    const displayWords = savedWords.filter(w => {
+        if (activeTab === 'unmastered') return !w.mastered;
+        if (activeTab === 'mastered') return !!w.mastered;
+        return true;
+    });
+
+    const masteredPct = wordCount > 0 ? Math.round((masteredCount / wordCount) * 100) : 0;
 
     // 练习模式视图
     if (isPracticing && practiceWords.length > 0) {
@@ -75,7 +94,7 @@ function VocabularyPage() {
                 </div>
 
                 <div className="practice-tip">
-                    💡 点击卡片翻转查看释义
+                    💡 点击卡片翻转查看释义，点击「学会了」标记掌握
                 </div>
             </div>
         );
@@ -120,16 +139,58 @@ function VocabularyPage() {
                         className="btn btn-primary"
                         onClick={startPractice}
                     >
-                        🎲 开始练习
+                        🎲 复习未学会词汇 ({unmasteredCount})
                     </button>
                 </div>
             </header>
 
-            <div className="flashcard-grid">
-                {savedWords.map((word, index) => (
-                    <Flashcard key={`${word.word}-${index}`} word={word} />
-                ))}
+            {/* 掌握进度条 */}
+            <div className="vocab-progress-card">
+                <div className="vocab-progress-header">
+                    <span className="progress-title">🎯 掌握进度榜</span>
+                    <span className="progress-info">
+                        已学会 <strong>{masteredCount}</strong> / {wordCount} 词 ({masteredPct}%)
+                    </span>
+                </div>
+                <div className="vocab-progress-bg">
+                    <div className="vocab-progress-fill" style={{ width: `${masteredPct}%` }} />
+                </div>
             </div>
+
+            {/* 过滤切页 Tabs */}
+            <div className="vocab-tabs">
+                <button
+                    className={`vocab-tab ${activeTab === 'unmastered' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('unmastered')}
+                >
+                    📖 学习中 ({unmasteredCount})
+                </button>
+                <button
+                    className={`vocab-tab ${activeTab === 'mastered' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('mastered')}
+                >
+                    ✅ 已学会 ({masteredCount})
+                </button>
+                <button
+                    className={`vocab-tab ${activeTab === 'all' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('all')}
+                >
+                    📚 全部 ({wordCount})
+                </button>
+            </div>
+
+            {/* 卡片列表 */}
+            {displayWords.length === 0 ? (
+                <div className="empty-sub-state">
+                    {activeTab === 'mastered' ? '还没有标记已学会的词汇，加油练习吧！💪' : '所有生词都已学会，真棒！🎉'}
+                </div>
+            ) : (
+                <div className="flashcard-grid">
+                    {displayWords.map((word, index) => (
+                        <Flashcard key={`${word.word}-${index}`} word={word} />
+                    ))}
+                </div>
+            )}
 
             <div className="vocab-footer">
                 <button

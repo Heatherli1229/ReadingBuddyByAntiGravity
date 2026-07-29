@@ -57,10 +57,16 @@ function Navbar() {
                             </div>
                         </>
                     ) : (
-                        <Link to="/auth" className={`navbar-link ${active('/auth')}`}>
-                            <span className="teacher-icon">🔑</span>
-                            <span>登录 / 注册</span>
-                        </Link>
+                        <div className="navbar-login-wrapper">
+                            <Link to="/auth" className={`navbar-link ${active('/auth')}`}>
+                                <span className="teacher-icon">🔑</span>
+                                <span>登录 / 注册</span>
+                            </Link>
+                            <div className="navbar-login-tooltip">
+                                ✨ 登录后记录您的个性化学习体验
+                                <div className="tooltip-arrow" />
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>

@@ -5,7 +5,7 @@ import './Flashcard.css';
 
 function Flashcard({ word, showRemove = true }) {
     const [isFlipped, setIsFlipped] = useState(false);
-    const { removeWord } = useVocab();
+    const { removeWord, toggleMastered } = useVocab();
 
     const handleFlip = () => {
         setIsFlipped(!isFlipped);
@@ -16,13 +16,23 @@ function Flashcard({ word, showRemove = true }) {
         speakWord(word.word);
     };
 
+    const handleToggleMastered = (e) => {
+        e.stopPropagation();
+        toggleMastered(word.word);
+    };
+
     const handleRemove = (e) => {
         e.stopPropagation();
         removeWord(word.word);
     };
 
     return (
-        <div className={`flashcard ${isFlipped ? 'flipped' : ''}`} onClick={handleFlip}>
+        <div className={`flashcard ${isFlipped ? 'flipped' : ''} ${word.mastered ? 'mastered' : ''}`} onClick={handleFlip}>
+            {word.mastered && (
+                <div className="mastered-badge" title="已学会">
+                    ✅ 已学会
+                </div>
+            )}
             <div className="flashcard-inner">
                 {/* 正面 */}
                 <div className="flashcard-front">
@@ -55,14 +65,23 @@ function Flashcard({ word, showRemove = true }) {
                     className="flashcard-action-btn speak"
                     onClick={handleSpeak}
                     aria-label="发音"
+                    title="发音"
                 >
                     🔊
+                </button>
+                <button
+                    className={`flashcard-action-btn master-btn ${word.mastered ? 'active' : ''}`}
+                    onClick={handleToggleMastered}
+                    title={word.mastered ? '标为学习中' : '标为已学会'}
+                >
+                    {word.mastered ? '✅ 已学会' : '学会了'}
                 </button>
                 {showRemove && (
                     <button
                         className="flashcard-action-btn remove"
                         onClick={handleRemove}
                         aria-label="移除"
+                        title="删除生词"
                     >
                         ❌
                     </button>

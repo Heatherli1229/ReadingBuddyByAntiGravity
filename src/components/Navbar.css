@@ -122,6 +122,48 @@
 .nav-role-tag.admin   { background: rgba(239,68,68,0.12); color: #dc2626; }
 .nav-role-tag.teacher { background: rgba(59,130,246,0.12); color: #2563eb; }
 
+/* ── 登录按钮悬浮提示 ─────────────────────────── */
+.navbar-login-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-login-tooltip {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    z-index: 200;
+}
+
+.navbar-login-wrapper:hover .navbar-login-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 小三角箭头 */
+.tooltip-arrow {
+    position: absolute;
+    top: -6px;
+    right: 18px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid #10b981;
+}
 
 @media (max-width: 640px) {
     .navbar-title {
@@ -138,5 +180,9 @@
 
     .vocab-icon {
         font-size: 1.25rem;
+    }
+
+    .navbar-login-tooltip {
+        display: none;
     }
 }

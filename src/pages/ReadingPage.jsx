@@ -2,6 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useArticles } from '../context/ArticleContext';
 import { useVocab } from '../context/VocabContext';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { speakWord } from '../utils/tts';
 import { getWordHskLevel } from '../utils/vocabDetector';
 import AudioPlayer from '../components/AudioPlayer';
@@ -13,6 +16,7 @@ import './ReadingPage.css';
 function ReadingPage() {
     const { id } = useParams();
     const { getArticleById, updateArticle } = useArticles();
+    const { currentUser } = useAuth();
     const article = getArticleById(id);
 
     // 若文章不存在，稍后返回加载状态
@@ -26,8 +30,16 @@ function ReadingPage() {
             updateArticle(article.id, { views: currentViews + 1 }).catch(e => {
                 console.error("更新浏览量失败:", e);
             });
+
+            // 记录用户已读文章历史
+            if (currentUser?.id) {
+                setDoc(doc(db, 'users', currentUser.id, 'readArticles', article.id), {
+                    readAt: Date.now(),
+                    title: article.title_cn || ''
+                }, { merge: true }).catch(err => console.warn('记录阅读历史失败:', err));
+            }
         }
-    }, [article, viewsIncremented, updateArticle]);
+    }, [article, viewsIncremented, updateArticle, currentUser]);
 
     const { addWord, isWordSaved } = useVocab();
     const [selectedWord, setSelectedWord] = useState(null);
