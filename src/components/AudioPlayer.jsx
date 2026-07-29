@@ -30,8 +30,14 @@ function AudioPlayer({ text, rate = 1, onRateChange }) {
             setIsPlaying(false);
         } else {
             setIsPlaying(true);
+            // 清理 HTML 标签，获得纯文本
+            const cleanText = text ? text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
+            if (!cleanText) {
+                setIsPlaying(false);
+                return;
+            }
             try {
-                await speakArticle(text, rate);
+                await speakArticle(cleanText, rate);
             } catch (e) {
                 console.error('TTS error:', e);
             }

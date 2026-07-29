@@ -22,6 +22,8 @@ export function VocabProvider({ children }) {
             snapshot.forEach(docSnap => {
                 loaded.push({ ...docSnap.data(), word: docSnap.id });
             });
+            // 按添加时间倒序排列（后加入的在最前）
+            loaded.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
             setSavedWords(loaded);
         });
 

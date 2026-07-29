@@ -6,7 +6,7 @@ import './VocabPopup.css';
 function VocabPopup({ word, onClose }) {
     const { addWord, removeWord, isWordSaved } = useVocab();
     const isSaved = isWordSaved(word.word);
-    const hskLevel = word.hskLevel || getWordHskLevel(word.word) || '1';
+    const hskLevel = getWordHskLevel(word.word) || word.hskLevel || '1';
 
     const handleSpeak = () => {
         speakWord(word.word);

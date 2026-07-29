@@ -3,6 +3,7 @@ import { useArticles } from '../context/ArticleContext';
 import { useAuth } from '../context/AuthContext';
 import ArticleCard from '../components/ArticleCard';
 import SearchFilter from '../components/SearchFilter';
+import { normalizeDifficulty } from '../constants/difficulty';
 import './HomePage.css';
 
 function HomePage() {
@@ -38,7 +39,7 @@ function HomePage() {
 
         // 按等级筛选
         if (selectedLevel && selectedLevel !== '全部') {
-            articles = articles.filter(a => a.level === selectedLevel);
+            articles = articles.filter(a => normalizeDifficulty(a.level) === selectedLevel);
         }
 
         // 按搜索词筛选

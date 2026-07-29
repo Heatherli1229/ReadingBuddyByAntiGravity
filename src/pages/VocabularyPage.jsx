@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useVocab } from '../context/VocabContext';
 import Flashcard from '../components/Flashcard';
+import ExportModal from '../components/ExportModal';
 import { speakWord } from '../utils/tts';
 import './VocabularyPage.css';
 
 function VocabularyPage() {
     const { savedWords, getRandomWords, wordCount, clearAllWords } = useVocab();
     const [isPracticing, setIsPracticing] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [practiceWords, setPracticeWords] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -109,6 +111,12 @@ function VocabularyPage() {
                 </div>
                 <div className="vocab-header-actions">
                     <button
+                        className="btn btn-secondary"
+                        onClick={() => setIsExporting(true)}
+                    >
+                        📥 导出生词本
+                    </button>
+                    <button
                         className="btn btn-primary"
                         onClick={startPractice}
                     >
@@ -135,6 +143,14 @@ function VocabularyPage() {
                     🗑️ 清空生词库
                 </button>
             </div>
+
+            {/* 导出弹窗 */}
+            {isExporting && (
+                <ExportModal
+                    words={savedWords}
+                    onClose={() => setIsExporting(false)}
+                />
+            )}
         </div>
     );
 }

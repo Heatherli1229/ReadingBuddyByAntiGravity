@@ -14,12 +14,18 @@ function AuthPage() {
     const [successMsg, setSuccessMsg] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const { login, register, resetPassword, isAuthenticated } = useAuth();
+    const { login, register, resetPassword, isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (isAuthenticated) navigate('/');
-    }, [isAuthenticated, navigate]);
+        if (isAuthenticated) {
+            if (isAdmin) {
+                navigate('/admin');
+            } else {
+                navigate('/');
+            }
+        }
+    }, [isAuthenticated, isAdmin, navigate]);
 
     const switchMode = (newMode) => {
         setMode(newMode);
@@ -85,7 +91,11 @@ function AuthPage() {
         setLoading(false);
 
         if (result.success) {
-            navigate('/');
+            if (result.role === 'admin' || isAdmin) {
+                navigate('/admin');
+            } else {
+                navigate('/');
+            }
         } else {
             setError(result.error);
         }

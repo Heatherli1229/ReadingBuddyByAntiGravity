@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import './ArticleCard.css';
+import { normalizeDifficulty } from '../constants/difficulty';
 
 function ArticleCard({ article, sourceType }) {
-    const { id, title_cn, title_en, level, characters, estimated_time, content } = article;
+    const { id, title_cn, title_en, level: rawLevel, characters, estimated_time, content } = article;
+    const level = normalizeDifficulty(rawLevel);
 
     // 获取文章摘要（前100个字符）
     const summary = content.substring(0, 100).replace(/\n/g, ' ') + '...';

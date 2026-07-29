@@ -72,8 +72,21 @@ export function AuthProvider({ children }) {
         // 支持真实邮箱登录；对旧账号（原始用户名）保留尾缀兼容
         const resolvedEmail = email.includes('@') ? email : `${email}@readingbuddy.local`;
         try {
-            await signInWithEmailAndPassword(auth, resolvedEmail, password);
-            return { success: true };
+            const userCredential = await signInWithEmailAndPassword(auth, resolvedEmail, password);
+            let role = 'student';
+            try {
+                const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+                if (userDoc.exists()) {
+                    role = userDoc.data().role || 'student';
+                } else if (resolvedEmail.startsWith('admin@')) {
+                    role = 'admin';
+                }
+            } catch (e) {
+                if (resolvedEmail.startsWith('admin@')) {
+                    role = 'admin';
+                }
+            }
+            return { success: true, role };
         } catch (error) {
             let msg = '邮箱或密码错误';
             if (error.code === 'auth/user-not-found') msg = '该邮箱未注册';
@@ -196,6 +209,17 @@ export function AuthProvider({ children }) {
         }
     };
 
+    // 管理员直接修改用户角色
+    const adminUpdateUserRole = async (userId, newRole) => {
+        try {
+            await updateDoc(doc(db, 'users', userId), { role: newRole });
+            await fetchUsers();
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    };
+
     // 判断文章是否是公开作者（教师/管理员）上传的
     const isPublicAuthor = (authorId, authorRole) => {
         // 1️⃣ 文章自带 authorRole 字段（新文章）
@@ -225,6 +249,7 @@ export function AuthProvider({ children }) {
         adminCreateUser,
         adminDeleteUser,
         adminResetPassword,
+        adminUpdateUserRole,
         isPublicAuthor,
         loading
     };

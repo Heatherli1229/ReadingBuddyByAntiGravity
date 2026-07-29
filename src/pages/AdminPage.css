@@ -2,6 +2,99 @@
     padding: 2rem 1rem;
 }
 
+/* ── Tab bar ──────────────────────────────── */
+.admin-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--color-gray-100);
+    border-radius: var(--radius-lg);
+    padding: 4px;
+    margin-bottom: 1.75rem;
+    width: fit-content;
+}
+
+.admin-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.5rem 1.25rem;
+    border: none;
+    background: transparent;
+    border-radius: calc(var(--radius-lg) - 2px);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-gray-500);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    white-space: nowrap;
+}
+
+.admin-tab:hover {
+    color: var(--color-gray-800);
+    background: rgba(255,255,255,0.6);
+}
+
+.admin-tab.active {
+    background: var(--color-white);
+    color: var(--color-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+
+.admin-tab-content {
+    animation: fadeIn 0.18s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Stats grid ───────────────────────────── */
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-stat-card {
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 1.4rem 1.6rem;
+    border-left: 4px solid var(--accent, var(--color-primary));
+    transition: box-shadow 0.18s;
+}
+
+.admin-stat-card:hover {
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.08));
+}
+
+.stat-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: var(--color-gray-900);
+    line-height: 1;
+}
+
+.stat-unit {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--color-gray-400);
+    margin-left: 4px;
+}
+
 .admin-title {
     font-size: 1.75rem;
     color: var(--color-gray-900);
@@ -75,7 +168,6 @@
     font-weight: 400;
     color: var(--color-gray-400);
 }
-
 
 .self-tag {
     margin-left: 0.5rem;
@@ -197,4 +289,198 @@
     color: var(--color-gray-900);
     font-family: monospace;
     font-size: 0.95rem;
+}
+
+/* ── Dashboard Grid Layout ───────────────────── */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.dashboard-col {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 1. 难度分布统计 */
+.difficulty-dist-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dist-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dist-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.dist-bar-bg {
+    height: 8px;
+    background: var(--color-gray-100, #f1f5f9);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.dist-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+/* 2. 热门文章 Top 5 */
+.top-articles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.top-article-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--color-gray-50, #f9fafb);
+    border: 1px solid var(--color-gray-200, #e5e7eb);
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.top-article-item:hover {
+    background: var(--color-white, #ffffff);
+    border-color: var(--color-primary, #10b981);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transform: translateX(2px);
+}
+
+.rank-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--color-gray-200, #e2e8f0);
+    color: var(--color-gray-700, #334155);
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.rank-badge.rank-1 { background: #fef08a; color: #854d0e; }
+.rank-badge.rank-2 { background: #e2e8f0; color: #334155; }
+.rank-badge.rank-3 { background: #ffedd5; color: #9a3412; }
+
+.top-article-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.top-article-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--color-gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.top-article-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--color-gray-500);
+    margin-top: 2px;
+}
+
+.top-article-views {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-primary, #10b981);
+    white-space: nowrap;
+}
+
+/* 3. 学生生词榜 Top 5 */
+.top-students-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.top-student-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed var(--color-gray-200, #e5e7eb);
+}
+
+.top-student-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.student-rank {
+    font-size: 1.25rem;
+    width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.student-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.student-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--color-gray-800);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.student-email {
+    font-weight: 400;
+    font-size: 0.78rem;
+    color: var(--color-gray-400);
+    margin-left: 4px;
+}
+
+.student-bar-bg {
+    height: 6px;
+    background: var(--color-gray-100, #f1f5f9);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.student-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.student-count {
+    font-size: 1rem;
+    color: var(--color-gray-900);
+    flex-shrink: 0;
 }

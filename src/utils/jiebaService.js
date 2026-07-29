@@ -3,12 +3,13 @@
  * 负责 jieba 的初始化、HSK 词库加载和文本分词
  */
 
+import init, { cut, tokenize, with_dict } from 'jieba-wasm';
+
 import {
     HSK_LEVEL_1, HSK_LEVEL_2, HSK_LEVEL_3, HSK_LEVEL_4,
     HSK_LEVEL_5, HSK_LEVEL_6, HSK_LEVEL_7_9
 } from '../data/hskVocab';
 
-let jiebaModule = null;
 let _isReady = false;
 let _initPromise = null;
 
@@ -22,17 +23,10 @@ export async function initJieba() {
 
     _initPromise = (async () => {
         try {
-            // 动态导入 jieba-wasm（浏览器端使用 web 版本）
-            const jieba = await import('jieba-wasm/web');
-            
-            // 必须先调用 init() 初始化 WASM
-            await jieba.default();
-            
-            jiebaModule = jieba;
+            // 初始化 WASM，传入 wasm 文件路径
+            await init('/jieba_rs_wasm_bg.wasm');
 
             // 将 HSK 词库加载为自定义词典
-            // 使用 with_dict 批量加载，格式: "词语 词频 词性\n"
-            // 为不同 HSK 等级设置不同词频，等级越低词频越高（优先匹配常见词）
             const hskLevels = [
                 { set: HSK_LEVEL_1, freq: 60000 },
                 { set: HSK_LEVEL_2, freq: 50000 },
@@ -46,7 +40,6 @@ export async function initJieba() {
             const dictLines = [];
             for (const { set, freq } of hskLevels) {
                 for (const word of set) {
-                    // 跳过包含数字后缀的标注词（如 "两1"、"会1"）
                     const cleanWord = word.replace(/\d+$/, '');
                     if (cleanWord.length > 0) {
                         dictLines.push(`${cleanWord} ${freq} n`);
@@ -54,9 +47,8 @@ export async function initJieba() {
                 }
             }
 
-            // 批量导入自定义词典
-            if (dictLines.length > 0 && jiebaModule.with_dict) {
-                jiebaModule.with_dict(dictLines.join('\n'));
+            if (dictLines.length > 0) {
+                with_dict(dictLines.join('\n'));
             }
 
             _isReady = true;
@@ -64,7 +56,7 @@ export async function initJieba() {
             return true;
         } catch (error) {
             console.error('[jiebaService] 初始化失败:', error);
-            _initPromise = null; // 允许重试
+            _initPromise = null;
             throw error;
         }
     })();
@@ -85,14 +77,13 @@ export function isJiebaReady() {
  * @returns {string[]} 分词结果数组
  */
 export function segmentText(text) {
-    if (!_isReady || !jiebaModule) {
+    if (!_isReady) {
         console.warn('[jiebaService] jieba 未初始化，回退到逐字切分');
         return [...text];
     }
 
     try {
-        // 使用精确模式分词 (hmm=true 启用新词发现)
-        return jiebaModule.cut(text, true);
+        return cut(text, true);
     } catch (error) {
         console.error('[jiebaService] 分词失败:', error);
         return [...text];
@@ -105,13 +96,13 @@ export function segmentText(text) {
  * @returns {Array<{word: string, start: number, end: number}>} 分词结果
  */
 export function tokenizeText(text) {
-    if (!_isReady || !jiebaModule) {
+    if (!_isReady) {
         console.warn('[jiebaService] jieba 未初始化，回退到逐字切分');
         return [...text].map((char, i) => ({ word: char, start: i, end: i + 1 }));
     }
 
     try {
-        return jiebaModule.tokenize(text, 'default', true);
+        return tokenize(text, 'default', true);
     } catch (error) {
         console.error('[jiebaService] tokenize 失败:', error);
         return [...text].map((char, i) => ({ word: char, start: i, end: i + 1 }));

@@ -7,6 +7,8 @@ import {
 } from '../data/hskVocab';
 import { VOCABULARY_DATABASE } from '../data/vocabDefinitions';
 import { initJieba, segmentText, isJiebaReady } from './jiebaService';
+import { generateDefinitionsForWords, getBaiduConfig } from './aiDefinition';
+
 
 // ===== HSK 词汇映射表 =====
 export const HSK_VOCAB_MAP = new Map();
@@ -30,6 +32,37 @@ for (const { set, level } of hskSets) {
             HSK_VOCAB_MAP.set(cleanWord, level);
         }
     }
+}
+
+/**
+ * 过滤分词产生的无效噪音词汇（如 "这百"、"四个"、"年间" 等句法结构）
+ */
+function isInvalidVocabulary(word) {
+    // 1. 过滤：数词/代词 + 量词/数字/时间单位（如 "四个", "这百", "这回", "五天", "这年"）
+    const pronounsAndNumbers = /^[这那每各自几数一二三四五六七八九十百千万多两半部]/.test(word);
+    const classifiers = /[个只只岁天年个月次位些双张本条支把间份回件座种段群项样起美度块元角分页部百千万亿]$/.test(word);
+    if (pronounsAndNumbers && classifiers && word.length <= 3) {
+        return true;
+    }
+
+    // 2. 过滤常见的连带时间方位伪词，如 "年间", "月间", "日间", "夜间", "年内" 等
+    const timeSuffixes = /^[年月日天分秒]/.test(word) && /[间内外里中上下]$/.test(word);
+    if (timeSuffixes && word.length <= 3) {
+        return true;
+    }
+
+    // 3. 过滤纯数字与纯度量衡词（如 "一万", "三十", "八百" 等纯数词）
+    if (/^[零一二三四五六七八九十百千万亿]+$/.test(word)) {
+        return true;
+    }
+
+    // 4. 过滤带有指示代词的词，如 "这里", "那里", "这个", "那个" 等常用口语指代组合
+    const demonstrativePronouns = /^(这里|那里|这个|那个|这些|那些|这儿|那儿|这样|那样|这就|那就)$/.test(word);
+    if (demonstrativePronouns) {
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -83,7 +116,7 @@ function shouldBeVocab(hskLevel, articleLevel) {
  * @param {string} level 文章等级：入门级/初级/中级/高级
  * @returns {Promise<Array>} 生词列表
  */
-export async function autoDetectVocabulary(content, level) {
+export async function autoDetectVocabulary(content, level, onProgress) {
     // 确保 jieba 已初始化
     await initJieba();
 
@@ -101,6 +134,10 @@ export async function autoDetectVocabulary(content, level) {
         
         // 如果在 HSK 词库中找不到，且是多字词，标记为 Non-HSK
         if (!hskLevel && word.length >= 2) {
+            // 过滤无效的分词噪音：如 "这百"、"四个"、"年间" 等句法/数量/时间指示短语
+            if (isInvalidVocabulary(word)) {
+                continue;
+            }
             hskLevel = 'Non-HSK';
         }
         
@@ -123,12 +160,30 @@ export async function autoDetectVocabulary(content, level) {
 
     const vocabulary = Array.from(vocabularyMap.values());
 
-    // 按 HSK 等级排序
-    vocabulary.sort((a, b) => {
-        const levelA = a.hskLevel === 'Non-HSK' ? 8 : (a.hskLevel === '7-9' ? 7 : parseInt(a.hskLevel));
-        const levelB = b.hskLevel === 'Non-HSK' ? 8 : (b.hskLevel === '7-9' ? 7 : parseInt(b.hskLevel));
-        return levelA - levelB;
-    });
+    // === AI 自动补充 Non-HSK 词汇释义 ===
+    // 找出所有缺少释义的词（优先处理 Non-HSK，也处理其他缺失释义的词）
+    const missingWords = vocabulary.filter(v => !v.pinyin || !v.en);
+    
+    if (missingWords.length > 0 && getBaiduConfig()?.appId && getBaiduConfig()?.appKey) {
+        try {
+            if (onProgress) onProgress(`🤖 正在用 AI 生成 ${missingWords.length} 个词的拼音和释义...`);
+            
+            const aiDefs = await generateDefinitionsForWords(missingWords.map(v => v.word));
+            
+            // 将 AI 生成的释义填充到词汇列表
+            for (const vocab of vocabulary) {
+                if (aiDefs[vocab.word]) {
+                    const aiDef = aiDefs[vocab.word];
+                    if (!vocab.pinyin && aiDef.pinyin) vocab.pinyin = aiDef.pinyin;
+                    if (!vocab.en && aiDef.en) vocab.en = aiDef.en;
+                    if (!vocab.cn && aiDef.cn) vocab.cn = aiDef.cn;
+                }
+            }
+        } catch (err) {
+            console.warn('AI 释义生成失败（将使用本地数据）：', err.message);
+            if (onProgress) onProgress(`⚠️ AI 释义生成失败：${err.message}`);
+        }
+    }
 
     return vocabulary;
 }
@@ -159,7 +214,11 @@ export function getWordDefinition(word) {
  * 获取词汇的HSK等级
  */
 export function getWordHskLevel(word) {
-    return HSK_VOCAB_MAP.get(word) || null;
+    if (!word) return '1';
+    const level = HSK_VOCAB_MAP.get(word);
+    if (level) return level;
+    if (word.length >= 2) return 'Non-HSK';
+    return '1';
 }
 
 /**

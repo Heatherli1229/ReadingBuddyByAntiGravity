@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useArticles } from '../context/ArticleContext';
 import { useVocab } from '../context/VocabContext';
@@ -7,12 +7,28 @@ import { getWordHskLevel } from '../utils/vocabDetector';
 import AudioPlayer from '../components/AudioPlayer';
 import ParagraphAudioButton from '../components/ParagraphAudioButton';
 import VocabPopup from '../components/VocabPopup';
+import { normalizeDifficulty } from '../constants/difficulty';
 import './ReadingPage.css';
 
 function ReadingPage() {
     const { id } = useParams();
-    const { getArticleById } = useArticles();
+    const { getArticleById, updateArticle } = useArticles();
     const article = getArticleById(id);
+
+    // 若文章不存在，稍后返回加载状态
+    const [viewsIncremented, setViewsIncremented] = useState(false);
+
+    useEffect(() => {
+        if (article && !viewsIncremented) {
+            setViewsIncremented(true);
+            // 延迟增加浏览量避免开发模式下 React 18 双重渲染副作用
+            const currentViews = article.views || 0;
+            updateArticle(article.id, { views: currentViews + 1 }).catch(e => {
+                console.error("更新浏览量失败:", e);
+            });
+        }
+    }, [article, viewsIncremented, updateArticle]);
+
     const { addWord, isWordSaved } = useVocab();
     const [selectedWord, setSelectedWord] = useState(null);
     const [playbackRate, setPlaybackRate] = useState(1);
@@ -31,95 +47,201 @@ function ReadingPage() {
         );
     }
 
+    const normalizedLevel = normalizeDifficulty(article.level);
+    // 按照生词在文章中首次出现的绝对位置重新排序
+    const orderedVocabulary = useMemo(() => {
+        if (!article.vocabulary || !article.content) return article.vocabulary || [];
+        
+        // 纯文本形式的文章内容（去除 HTML 标签以精准计算位置）
+        const textOnly = article.content.replace(/<[^>]+>/g, '');
+        
+        return [...article.vocabulary].sort((a, b) => {
+            const posA = textOnly.indexOf(a.word);
+            const posB = textOnly.indexOf(b.word);
+            // 如果都找到，按出现先后；找不到的靠后
+            if (posA !== -1 && posB !== -1) return posA - posB;
+            if (posA !== -1) return -1;
+            if (posB !== -1) return 1;
+            return 0;
+        });
+    }, [article.vocabulary, article.content]);
+
     // 创建生词表（用于快速查找）
     const vocabMap = useMemo(() => {
         const map = new Map();
-        article.vocabulary.forEach(word => {
+        orderedVocabulary.forEach(word => {
             map.set(word.word, word);
         });
         return map;
-    }, [article.vocabulary]);
+    }, [orderedVocabulary]);
 
-    // 将文章内容转换为带有生词标记和段落发音的元素
-    const renderContent = () => {
-        const content = article.content;
-        const words = Array.from(vocabMap.keys()).sort((a, b) => b.length - a.length);
-        const pattern = words.length > 0
-            ? new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'g')
-            : null;
+    // 将普通文本片段进行生词分词高亮，并渲染为 React Spans
+    const segmentAndHighlightText = (rawText, keyPrefix) => {
+        if (!rawText) return null;
 
-        return content.split('\n').map((paragraph, pIndex) => {
-            if (!paragraph.trim()) {
-                // 空行保留
-                return <br key={`br-${pIndex}`} />;
+        const parts = [];
+        let i = 0;
+        while (i < rawText.length) {
+            let matchedWord = null;
+            const maxLen = Math.min(10, rawText.length - i);
+            
+            for (let len = maxLen; len > 0; len--) {
+                const str = rawText.substring(i, i + len);
+                if (vocabMap.has(str)) {
+                    matchedWord = str;
+                    break;
+                }
             }
 
-            // 对段落内容进行生词替换 - 使用正向最大匹配算法，防止子词覆盖（如“复杂”中的“杂”）
-            const parts = [];
-            let i = 0;
-            while (i < paragraph.length) {
-                let matchedWord = null;
-                // 从当前位置向后匹配，优先匹配最长的词汇
-                // 假设最长词汇长度不超过10个字符
-                const maxLen = Math.min(10, paragraph.length - i);
-                
-                for (let len = maxLen; len > 0; len--) {
-                    const str = paragraph.substring(i, i + len);
-                    if (vocabMap.has(str)) {
-                        matchedWord = str;
-                        break;
-                    }
-                }
-
-                if (matchedWord) {
-                    // 如果之前累积了普通文本，先将其作为独立part推入，这样就只有遇到生词时才切割
-                    parts.push(matchedWord);
-                    i += matchedWord.length;
+            if (matchedWord) {
+                parts.push({ word: matchedWord, isVocab: true });
+                i += matchedWord.length;
+            } else {
+                if (parts.length > 0 && !parts[parts.length - 1].isVocab) {
+                    parts[parts.length - 1].word += rawText[i];
                 } else {
-                    // 如果当前字符不是生词的开头，则将其作为普通文本累积
-                    // 为了优化 React 渲染，我们把连续的普通字符合并
-                    if (parts.length > 0 && !vocabMap.has(parts[parts.length - 1])) {
-                        parts[parts.length - 1] += paragraph[i];
-                    } else {
-                        parts.push(paragraph[i]);
-                    }
-                    i++;
+                    parts.push({ word: rawText[i], isVocab: false });
                 }
+                i++;
             }
+        }
 
+        return parts.map((part, partIdx) => {
+            if (part.isVocab) {
+                const wordObj = vocabMap.get(part.word);
+                const isSaved = isWordSaved(part.word);
+                const hskLevel = getWordHskLevel(part.word) || wordObj.hskLevel || '1';
+                return (
+                    <span
+                        key={`${keyPrefix}-vocab-${partIdx}`}
+                        className={`vocab-word ${isSaved ? 'saved' : ''}`}
+                        style={{ 
+                            '--hsk-color': `var(--color-hsk-${hskLevel})`
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedWord(wordObj);
+                        }}
+                    >
+                        {part.word}
+                    </span>
+                );
+            }
+            
             return (
-                <p key={`p-${pIndex}`} className="reading-paragraph" style={{ marginBottom: '1rem', lineHeight: '1.8' }}>
-                    {parts.map((part, index) => {
-                        if (vocabMap.has(part)) {
-                            const word = vocabMap.get(part);
-                            const isSaved = isWordSaved(part);
-                            const hskLevel = word.hskLevel || getWordHskLevel(part) || '1';
-                            return (
-                                <span
-                                    key={index}
-                                    className={`vocab-word ${isSaved ? 'saved' : ''}`}
-                                    style={{ 
-                                        color: `var(--color-hsk-${hskLevel})`, 
-                                        borderBottomColor: `var(--color-hsk-${hskLevel})`, 
-                                        backgroundColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 15%, transparent)` 
-                                    }}
-                                    onClick={() => setSelectedWord(word)}
-                                >
-                                    {part}
-                                </span>
-                            );
-                        }
-                        return <span key={index}>{part}</span>;
-                    })}
-                    <ParagraphAudioButton text={paragraph} rate={playbackRate} />
-                </p>
+                <span key={`${keyPrefix}-text-${partIdx}`}>
+                    {part.word}
+                </span>
             );
         });
     };
 
+    // 递归解析 HTML DOM 并渲染为交互式 React Elements
+    const renderDomNode = (node, index) => {
+        if (node.nodeType === 3) { // TEXT_NODE
+            return segmentAndHighlightText(node.nodeValue, `node-${index}`);
+        }
+
+        if (node.nodeType === 1) { // ELEMENT_NODE
+            const tagName = node.tagName.toLowerCase();
+            const childElements = Array.from(node.childNodes).map((child, childIdx) => renderDomNode(child, childIdx));
+
+            // 对特定的 HTML 元素套用精致排版样式
+            switch (tagName) {
+                case 'p':
+                    // 如果是空段落
+                    if (!node.textContent.trim() && !node.querySelector('img')) {
+                        return <br key={index} />;
+                    }
+                    return (
+                        <p key={index} className="reading-paragraph" style={{ marginBottom: '1rem', lineHeight: '1.8' }}>
+                            {childElements}
+                            {node.textContent.trim() && <ParagraphAudioButton text={node.textContent} rate={playbackRate} />}
+                        </p>
+                    );
+                case 'h3':
+                    return (
+                        <div key={index} className="reading-heading-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.8rem', marginBottom: '0.8rem' }}>
+                            <h3 className="reading-heading-h3" style={{ fontSize: '1.4rem', fontWeight: 'bold', color: 'var(--color-gray-900)', margin: 0 }}>
+                                {childElements}
+                            </h3>
+                            {node.textContent.trim() && <ParagraphAudioButton text={node.textContent} rate={playbackRate} />}
+                        </div>
+                    );
+                case 'ul':
+                    return <ul key={index} className="reading-list" style={{ marginLeft: '1.5rem', marginBottom: '0.8rem' }}>{childElements}</ul>;
+                case 'ol':
+                    return <ol key={index} className="reading-list" style={{ marginLeft: '1.5rem', marginBottom: '0.8rem' }}>{childElements}</ol>;
+                case 'li':
+                    return (
+                        <li key={index} className="reading-list-item" style={{ lineHeight: '1.8', marginBottom: '0.5rem' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                                <span style={{ flex: 1 }}>{childElements}</span>
+                                {node.textContent.trim() && <ParagraphAudioButton text={node.textContent} rate={playbackRate} />}
+                            </span>
+                        </li>
+                    );
+                case 'strong':
+                case 'b':
+                    return <strong key={index}>{childElements}</strong>;
+                case 'em':
+                case 'i':
+                    return <em key={index}>{childElements}</em>;
+                case 'img':
+                    const src = node.getAttribute('src');
+                    const alt = node.getAttribute('alt') || '图片';
+                    return (
+                        <div key={index} className="rich-media-container">
+                            <img src={src} alt={alt} className="rich-media-img" />
+                            {alt && alt !== '图片' && alt !== '粘贴图片' && (
+                                <span className="rich-media-caption">{alt}</span>
+                            )}
+                        </div>
+                    );
+                case 'br':
+                    return <br key={index} />;
+                default:
+                    // 其他标签原样渲染
+                    const CustomTag = tagName;
+                    return <CustomTag key={index}>{childElements}</CustomTag>;
+            }
+        }
+
+        return null;
+    };
+
+    // 将富文本 HTML 转换为带有生词标记和段落发音的元素
+    const renderContent = () => {
+        const content = article.content;
+        if (!content) return null;
+
+        // 如果是老数据（纯文本），包裹在段落中进行普通分词
+        if (!content.trim().startsWith('<')) {
+            return content.split('\n').map((paragraph, pIndex) => {
+                if (!paragraph.trim()) return <br key={`br-${pIndex}`} />;
+                return (
+                    <p key={`p-${pIndex}`} className="reading-paragraph" style={{ marginBottom: '1rem', lineHeight: '1.8' }}>
+                        {segmentAndHighlightText(paragraph, `old-${pIndex}`)}
+                        <ParagraphAudioButton text={paragraph} rate={playbackRate} />
+                    </p>
+                );
+            });
+        }
+
+        // 使用 DOMParser 解析富文本 HTML
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(content, 'text/html');
+            return Array.from(doc.body.childNodes).map((node, index) => renderDomNode(node, index));
+        } catch (e) {
+            console.error('HTML解析失败，采用退回模式渲染：', e);
+            return <div dangerouslySetInnerHTML={{ __html: content }} />;
+        }
+    };
+
     // 获取等级颜色
     const getLevelClass = () => {
-        switch (article.level) {
+        switch (normalizedLevel) {
             case '入门级': return 'badge-entry';
             case '初级': return 'badge-beginner';
             case '中级': return 'badge-intermediate';
@@ -127,7 +249,6 @@ function ReadingPage() {
             default: return 'badge-entry';
         }
     };
-
     const handleSpeakWord = (word) => {
         speakWord(word.word);
     };
@@ -144,7 +265,7 @@ function ReadingPage() {
                     ← 返回列表
                 </Link>
                 <div className="article-info">
-                    <span className={`badge ${getLevelClass()}`}>{article.level}</span>
+                    <span className={`badge ${getLevelClass()}`}>{normalizedLevel}</span>
                     <span className="article-meta">{article.characters} 字 · {article.estimated_time}</span>
                 </div>
             </header>
@@ -174,41 +295,47 @@ function ReadingPage() {
             {/* 本篇生词列表 */}
             <section className="vocab-section">
                 <h3 className="vocab-section-title">
-                    📚 本篇生词 ({article.vocabulary.length})
+                    📚 本篇生词 ({orderedVocabulary.length})
                 </h3>
                 <div className="vocab-grid">
-                    {article.vocabulary.map((word, index) => {
+                    {orderedVocabulary.map((word, index) => {
                         const isSaved = isWordSaved(word.word);
-                        const hskLevel = word.hskLevel || getWordHskLevel(word.word) || '1';
+                        const hskLevel = getWordHskLevel(word.word) || word.hskLevel || '1';
                         return (
-                            <div key={index} className="vocab-card card-flat" style={{ borderLeft: `4px solid var(--color-hsk-${hskLevel})` }}>
+                            <div key={index} className="vocab-card" style={{ '--hsk-color': `var(--color-hsk-${hskLevel})` }}>
                                 <div className="vocab-card-header">
-                                    <span className="vocab-card-word" style={{ color: `var(--color-hsk-${hskLevel})` }}>{word.word}</span>
-                                    <span className="vocab-card-pinyin">{word.pinyin}</span>
+                                    <div className="vocab-word-group">
+                                        <span className="vocab-card-word" style={{ color: `var(--color-hsk-${hskLevel})` }}>{word.word}</span>
+                                        <span className="vocab-card-pinyin">{word.pinyin}</span>
+                                    </div>
+                                    <span className="vocab-card-hsk-badge" style={{ 
+                                        backgroundColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 12%, transparent)`,
+                                        color: `var(--color-hsk-${hskLevel})`,
+                                        borderColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 30%, transparent)`
+                                    }}>
+                                        {hskLevel === 'Non-HSK' ? 'Non-HSK' : `HSK ${hskLevel}级`}
+                                    </span>
                                 </div>
                                 <div className="vocab-card-body">
-                                    <p className="vocab-card-en">{word.en}</p>
-                                    <p className="vocab-card-cn">{word.cn}</p>
-                                    <p className="vocab-card-hsk" style={{ 
-                                        backgroundColor: `color-mix(in srgb, var(--color-hsk-${hskLevel}) 15%, transparent)`,
-                                        color: `var(--color-hsk-${hskLevel})`
-                                    }}>
-                                        {hskLevel === 'Non-HSK' ? 'Non-HSK' : `HSK ${hskLevel} 级`}
-                                    </p>
+                                    {word.en && <p className="vocab-card-en">{word.en}</p>}
+                                    {word.cn && <p className="vocab-card-cn">{word.cn}</p>}
                                 </div>
                                 <div className="vocab-card-actions">
                                     <button
-                                        className="btn btn-sm btn-ghost"
+                                        className="vocab-action-btn speak-btn"
                                         onClick={() => handleSpeakWord(word)}
+                                        title="发音"
                                     >
-                                        🔊 发音
+                                        <span className="icon">🔊</span>
+                                        <span>发音</span>
                                     </button>
                                     <button
-                                        className={`btn btn-sm ${isSaved ? 'btn-ghost saved' : 'btn-primary'}`}
+                                        className={`vocab-action-btn save-btn ${isSaved ? 'saved' : ''}`}
                                         onClick={() => handleAddWord(word)}
                                         disabled={isSaved}
                                     >
-                                        {isSaved ? '✓ 已收藏' : '⭐ 收藏'}
+                                        <span className="icon">{isSaved ? '✓' : '⭐'}</span>
+                                        <span>{isSaved ? '已收藏' : '收藏'}</span>
                                     </button>
                                 </div>
                             </div>

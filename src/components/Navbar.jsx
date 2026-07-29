@@ -12,31 +12,37 @@ function Navbar() {
     return (
         <nav className="navbar">
             <div className="container navbar-container">
-                <Link to="/" className="navbar-brand">
+                <Link to={isAdmin ? "/admin" : "/"} className="navbar-brand">
                     <span className="navbar-logo">📚</span>
                     <span className="navbar-title">AI 阅读小帮手</span>
                 </Link>
 
                 <div className="navbar-links">
-                    <Link to="/" className={`navbar-link ${active('/')}`}>文章列表</Link>
+                    {!isAdmin && (
+                        <Link to="/" className={`navbar-link ${active('/')}`}>文章列表</Link>
+                    )}
 
                     {isAuthenticated ? (
                         <>
-                            <Link to="/vocabulary" className={`navbar-link vocab-link ${active('/vocabulary')}`}>
-                                <span className="vocab-icon">📝</span>
-                                <span>我的生词库</span>
-                                {wordCount > 0 && <span className="vocab-count">{wordCount}</span>}
-                            </Link>
+                        {currentUser.role === 'student' && (
+                                <Link to="/vocabulary" className={`navbar-link vocab-link ${active('/vocabulary')}`}>
+                                    <span className="vocab-icon">📝</span>
+                                    <span>我的生词本</span>
+                                    {wordCount > 0 && <span className="vocab-count">{wordCount}</span>}
+                                </Link>
+                            )}
 
-                            <Link to="/teacher" className={`navbar-link ${active('/teacher')}`}>
-                                <span className="teacher-icon">✍️</span>
-                                <span>我的文章</span>
-                            </Link>
+                            {currentUser.role === 'teacher' && (
+                                <Link to="/teacher" className={`navbar-link ${active('/teacher')}`}>
+                                    <span className="teacher-icon">✍️</span>
+                                    <span>我的文章</span>
+                                </Link>
+                            )}
 
                             {isAdmin && (
                                 <Link to="/admin" className={`navbar-link ${active('/admin')}`}>
-                                    <span className="teacher-icon">👤</span>
-                                    <span>用户管理</span>
+                                    <span className="teacher-icon">⚙️</span>
+                                    <span>管理后台</span>
                                 </Link>
                             )}
 

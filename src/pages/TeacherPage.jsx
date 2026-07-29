@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useArticles } from '../context/ArticleContext';
 import { useAuth } from '../context/AuthContext';
 import { autoDetectVocabulary, analyzeArticleDifficulty } from '../utils/vocabDetector';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
+
 import './TeacherPage.css';
+import { normalizeDifficulty } from '../constants/difficulty';
 
 // 空白文章模板
 const EMPTY_ARTICLE = {
@@ -27,6 +31,7 @@ function TeacherPage() {
     const { articles, addArticle, updateArticle, deleteArticle } = useArticles();
     const { currentUser, isAuthenticated } = useAuth();
     const navigate = useNavigate();
+    const textareaRef = useRef(null);
 
     // 保护路由
     useEffect(() => {
@@ -39,6 +44,28 @@ function TeacherPage() {
     const [editingArticle, setEditingArticle] = useState(null);
     const [formData, setFormData] = useState(EMPTY_ARTICLE);
     const [isCreating, setIsCreating] = useState(false);
+
+    // AI 相关状态
+    const [isAutoDetecting, setIsAutoDetecting] = useState(false);
+    const [aiProgress, setAiProgress] = useState('');
+
+    // Quill 编辑器工具栏配置
+    const quillModules = {
+        toolbar: [
+            [{ 'header': [3, false] }],
+            ['bold', 'italic'],
+            [{ 'list': 'bullet' }],
+            ['image'],
+            ['clean']
+        ],
+    };
+
+    const quillFormats = [
+        'header',
+        'bold', 'italic',
+        'list', 'bullet',
+        'image'
+    ];
 
     // 获取当前用户创建的所有文章
     const myArticles = articles.filter(a => a.authorId === currentUser?.id);
@@ -126,63 +153,81 @@ function TeacherPage() {
         }));
     };
 
+
+
     // 自动识别生词
-    const handleAutoDetect = () => {
+    const handleAutoDetect = async () => {
         if (!formData.content.trim()) {
             alert('请先输入文章内容');
             return;
         }
 
-        // 分析文章难度
-        const analysis = analyzeArticleDifficulty(formData.content);
-        let effectiveLevel = formData.level;
+        setIsAutoDetecting(true);
+        setAiProgress('🔍 正在分析文章难度...');
 
-        // 如果分析出的难度与选择的不一致，提示用户
-        if (analysis.level !== formData.level) {
-            const confirmChange = confirm(
-                `根据文章内容分析，建议难度等级为「${analysis.level}」\n` +
-                `(当前选择: ${formData.level})\n\n` +
-                `是否调整为建议等级？`
+        try {
+            // 分析文章难度
+            const analysis = await analyzeArticleDifficulty(formData.content);
+            let effectiveLevel = formData.level;
+
+            // 如果分析出的难度与选择的不一致，提示用户
+            if (analysis.level && analysis.level !== formData.level) {
+                const suggestedLevel = analysis.level || formData.level;
+                const confirmChange = confirm(
+                    `根据文章内容分析，建议难度等级为「${suggestedLevel}」\n` +
+                    `(当前选择: ${formData.level})\n\n` +
+                    `是否调整为建议等级？`
+                );
+
+                if (confirmChange) {
+                    effectiveLevel = analysis.level;
+                    setFormData(prev => ({ ...prev, level: analysis.level }));
+                }
+            }
+
+            setAiProgress('✂️ 正在分词并识别生词...');
+            const detectedVocab = await autoDetectVocabulary(
+                formData.content,
+                effectiveLevel,
+                (msg) => setAiProgress(msg)  // 传递进度回调
             );
 
-            if (confirmChange) {
-                effectiveLevel = analysis.level;
-                setFormData(prev => ({ ...prev, level: analysis.level }));
+            if (detectedVocab.length === 0) {
+                alert('未能识别到生词，请检查文章内容或手动添加');
+                return;
             }
+
+            // 合并已有生词和新识别的生词，避免重复
+            const existingWords = new Set(formData.vocabulary.map(v => v.word));
+            const newVocab = detectedVocab.filter(v => !existingWords.has(v.word));
+
+            if (newVocab.length === 0) {
+                alert('没有发现新的生词');
+                return;
+            }
+
+            setFormData(prev => ({
+                ...prev,
+                vocabulary: [...prev.vocabulary, ...newVocab]
+            }));
+
+            // 统计有多少词有完整释义
+            const withDefinition = newVocab.filter(v => v.pinyin && v.en).length;
+            const needsInput = newVocab.length - withDefinition;
+
+            let message = `✅ 成功识别 ${newVocab.length} 个生词！\n`;
+            message += `📖 ${withDefinition} 个词已自动填充释义\n`;
+            if (needsInput > 0) {
+                message += `✏️ ${needsInput} 个词需要手动补充释义`;
+            }
+
+            alert(message);
+        } catch (err) {
+            alert(`识别失败：${err.message}`);
+        } finally {
+            setIsAutoDetecting(false);
+            setAiProgress('');
         }
-
-        const detectedVocab = autoDetectVocabulary(formData.content, effectiveLevel);
-
-        if (detectedVocab.length === 0) {
-            alert('未能识别到生词，请检查文章内容或手动添加');
-            return;
-        }
-
-        // 合并已有生词和新识别的生词，避免重复
-        const existingWords = new Set(formData.vocabulary.map(v => v.word));
-        const newVocab = detectedVocab.filter(v => !existingWords.has(v.word));
-
-        if (newVocab.length === 0) {
-            alert('没有发现新的生词');
-            return;
-        }
-
-        setFormData(prev => ({
-            ...prev,
-            vocabulary: [...prev.vocabulary, ...newVocab]
-        }));
-
-        // 统计有多少词有完整释义
-        const withDefinition = newVocab.filter(v => v.pinyin && v.en).length;
-        const needsInput = newVocab.length - withDefinition;
-
-        let message = `✅ 成功识别 ${newVocab.length} 个生词！\n`;
-        message += `📖 ${withDefinition} 个词已自动填充释义\n`;
-        if (needsInput > 0) {
-            message += `✏️ ${needsInput} 个词需要手动补充释义`;
-        }
-
-        alert(message);
     };
 
     // (登录页面已被移除，由 AuthPage 接管)
@@ -244,17 +289,25 @@ function TeacherPage() {
                         </div>
 
                         <div className="form-group">
-                            <label className="form-label">文章内容 *</label>
-                            <textarea
-                                className="input textarea"
-                                value={formData.content}
-                                onChange={(e) => updateFormField('content', e.target.value)}
-                                placeholder="请输入文章正文..."
-                                rows={10}
-                            />
-                            <span className="char-count">
-                                {formData.content.length} 字 · 预计 {Math.ceil(formData.content.length / 100) || 1} 分钟阅读
-                            </span>
+                            <label className="form-label" style={{ marginBottom: 'var(--spacing-2)' }}>文章内容 *</label>
+                            <div className="quill-editor-wrapper">
+                                <ReactQuill
+                                    theme="snow"
+                                    value={formData.content}
+                                    onChange={(val) => updateFormField('content', val)}
+                                    modules={quillModules}
+                                    formats={quillFormats}
+                                    placeholder="请在这里写下正文内容... 可以直接粘贴(Ctrl+V)截图，或拖入本地图片文件。支持加粗、斜体、列表、三级小标题。"
+                                />
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'var(--spacing-1)', flexWrap: 'wrap', gap: '8px' }}>
+                                <span className="char-count" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-gray-400)' }}>
+                                    💡 提示：选中文字可以设置标题、加粗；直接复制屏幕截图在编辑器内 Ctrl+V 即可直插图片。
+                                </span>
+                                <span className="char-count">
+                                    {formData.content.replace(/<[^>]*>/g, '').length} 字 · 预计 {Math.ceil(formData.content.replace(/<[^>]*>/g, '').length / 100) || 1} 分钟阅读
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -264,11 +317,11 @@ function TeacherPage() {
                             <div className="section-actions">
                                 <button
                                     type="button"
-                                    className="btn btn-sm btn-primary auto-detect-btn"
+                                    className={`btn btn-sm btn-primary auto-detect-btn ${isAutoDetecting ? 'loading' : ''}`}
                                     onClick={handleAutoDetect}
-                                    disabled={!formData.content.trim()}
+                                    disabled={!formData.content.trim() || isAutoDetecting}
                                 >
-                                    🤖 自动识别生词
+                                    {isAutoDetecting ? '⏳ 识别中...' : '🤖 自动识别生词'}
                                 </button>
                                 <button
                                     type="button"
@@ -280,8 +333,16 @@ function TeacherPage() {
                             </div>
                         </div>
 
+                        {/* AI 进度显示 */}
+                        {isAutoDetecting && aiProgress && (
+                            <div className="ai-progress">
+                                <span className="ai-progress-spinner"></span>
+                                <span>{aiProgress}</span>
+                            </div>
+                        )}
+
                         <div className="auto-detect-hint">
-                            💡 根据「{formData.level}」难度自动识别生词，识别后可手动编辑补充
+                            💡 根据「{formData.level}」难度自动识别生词，拼音自动生成。英文释义请手动补充。
                         </div>
 
                         {formData.vocabulary.length === 0 ? (
@@ -387,9 +448,9 @@ function TeacherPage() {
                     <div key={article.id} className="article-item card-flat">
                         <div className="article-item-info">
                             <div className="article-item-header">
-                                <span className={`badge badge-${article.level === '入门级' ? 'entry' : article.level === '初级' ? 'beginner' : article.level === '中级' ? 'intermediate' : 'advanced'}`}>
-                                    {article.level}
-                                </span>
+                        <span className={"badge " + ({'入门级':'badge-entry','初级':'badge-beginner','中级':'badge-intermediate','高级':'badge-advanced'}[normalizeDifficulty(article.level)] || '')}>{normalizeDifficulty(article.level) || '未知'}</span>
+                            
+
                                 <span className="article-item-meta">
                                     {article.characters} 字 · {article.vocabulary.length} 个生词
                                 </span>
