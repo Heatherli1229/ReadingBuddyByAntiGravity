@@ -126,20 +126,18 @@ export function AuthProvider({ children }) {
             return { success: false, error: '请输入有效的邮箱地址' };
         }
         try {
-            // 优先尝试使用带应用内回调地址的 actionCodeSettings
-            try {
-                const actionCodeSettings = {
-                    url: window.location.origin + '/auth',
-                    handleCodeInApp: true,
-                };
-                await sendPasswordResetEmail(auth, email, actionCodeSettings);
-                return { success: true };
-            } catch (uriError) {
-                console.warn('应用内回调地址未在 Firebase 授权，自动退回标准重置邮件:', uriError.message);
-                // 降级使用标准重置邮件，保证邮件 100% 能发送成功
-                await sendPasswordResetEmail(auth, email);
-                return { success: true };
-            }
+            // 使用 Firebase 官方已授权的域名重定向回到应用 /auth 页面
+            // 确保用户点击邮件链接后跳转到我们带有“双密码确认”框的自定义中文界面
+            const targetUrl = window.location.origin.includes('localhost')
+                ? 'https://reading-buddy-c7041.firebaseapp.com/auth'
+                : `${window.location.origin}/auth`;
+
+            const actionCodeSettings = {
+                url: targetUrl,
+                handleCodeInApp: true,
+            };
+            await sendPasswordResetEmail(auth, email, actionCodeSettings);
+            return { success: true };
         } catch (error) {
             console.error('发送密码重置邮件失败:', error);
             let msg = '发送失败，请检查邮箱是否正确';
