@@ -7,6 +7,7 @@ import {
     onAuthStateChanged,
     updatePassword,
     sendPasswordResetEmail,
+    confirmPasswordReset,
     EmailAuthProvider,
     reauthenticateWithCredential
 } from 'firebase/auth';
@@ -135,6 +136,19 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const handleConfirmPasswordReset = async (oobCode, newPassword) => {
+        try {
+            await confirmPasswordReset(auth, oobCode, newPassword);
+            return { success: true };
+        } catch (error) {
+            let msg = '密码重置失败，链接可能已过期或无效';
+            if (error.code === 'auth/invalid-action-code') msg = '重置链接无效或已被使用';
+            if (error.code === 'auth/expired-action-code') msg = '重置链接已过期，请重新申请发送邮件';
+            if (error.code === 'auth/weak-password') msg = '密码长度至少需要6位';
+            return { success: false, error: msg };
+        }
+    };
+
     const logout = async () => {
         await signOut(auth);
     };
@@ -249,6 +263,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         resetPassword,
+        handleConfirmPasswordReset,
         logout,
         changePassword,
         adminCreateUser,
