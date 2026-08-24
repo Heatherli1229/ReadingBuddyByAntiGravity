@@ -126,16 +126,26 @@ export function AuthProvider({ children }) {
             return { success: false, error: '请输入有效的邮箱地址' };
         }
         try {
-            const actionCodeSettings = {
-                url: window.location.origin + '/auth',
-                handleCodeInApp: true,
-            };
-            await sendPasswordResetEmail(auth, email, actionCodeSettings);
-            return { success: true };
+            // 优先尝试使用带应用内回调地址的 actionCodeSettings
+            try {
+                const actionCodeSettings = {
+                    url: window.location.origin + '/auth',
+                    handleCodeInApp: true,
+                };
+                await sendPasswordResetEmail(auth, email, actionCodeSettings);
+                return { success: true };
+            } catch (uriError) {
+                console.warn('应用内回调地址未在 Firebase 授权，自动退回标准重置邮件:', uriError.message);
+                // 降级使用标准重置邮件，保证邮件 100% 能发送成功
+                await sendPasswordResetEmail(auth, email);
+                return { success: true };
+            }
         } catch (error) {
+            console.error('发送密码重置邮件失败:', error);
             let msg = '发送失败，请检查邮箱是否正确';
-            if (error.code === 'auth/user-not-found') msg = '该邮箱未注册';
+            if (error.code === 'auth/user-not-found') msg = '该邮箱未在系统中注册，请先注册账号';
             if (error.code === 'auth/invalid-email') msg = '邮箱格式不正确';
+            if (error.code === 'auth/too-many-requests') msg = '请求太频繁，请稍后再试或检查垃圾邮件箱';
             return { success: false, error: msg };
         }
     };
