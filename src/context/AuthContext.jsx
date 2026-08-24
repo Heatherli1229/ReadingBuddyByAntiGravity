@@ -222,16 +222,21 @@ export function AuthProvider({ children }) {
 
     // 判断文章是否是公开作者（教师/管理员）上传的
     const isPublicAuthor = (authorId, authorRole) => {
-        // 1️⃣ 文章自带 authorRole 字段（新文章）
+        // 1️⃣ 当前登录用户本身是教师或管理员，且文章由当前用户发布
+        if (currentUser && currentUser.id === authorId) {
+            if (currentUser.role === 'teacher' || currentUser.role === 'admin') return true;
+        }
+        // 2️⃣ 动态查找 users 列表中该作者最新的 role（防止修改角色后视图不同步）
+        const author = users.find(u => u.id === authorId);
+        if (author) {
+            return author.role === 'teacher' || author.role === 'admin';
+        }
+        // 3️⃣ 文章自带 authorRole 字段
         if (authorRole) {
             return authorRole === 'teacher' || authorRole === 'admin';
         }
-        // 2️⃣ 旧种子数据：authorId 就是字符串 'teacher'
+        // 4️⃣ 旧种子数据：authorId 就是字符串 'teacher'
         if (authorId === 'teacher') return true;
-        // 3️⃣ 历史文章：通过 users 列表回退查找
-        const author = users.find(u => u.id === authorId);
-        if (author) return author.role === 'teacher' || author.role === 'admin';
-        // 4️⃣ users 列表为空（未登录且 Firestore 读取失败）→默认隐藏此文章
         return false;
     };
 
