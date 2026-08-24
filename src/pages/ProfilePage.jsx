@@ -36,14 +36,14 @@ function ProfilePage() {
         fetchReadCount();
     }, [currentUser]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setMessage(null);
         if (newPwd !== confirmPwd) {
             setMessage({ type: 'error', text: '两次输入的新密码不一致' });
             return;
         }
-        const result = changePassword(oldPwd, newPwd);
+        const result = await changePassword(oldPwd, newPwd);
         if (result.success) {
             setMessage({ type: 'success', text: '密码修改成功！' });
             setOldPwd(''); setNewPwd(''); setConfirmPwd('');

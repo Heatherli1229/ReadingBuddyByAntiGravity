@@ -160,13 +160,13 @@ export async function autoDetectVocabulary(content, level, onProgress) {
 
     const vocabulary = Array.from(vocabularyMap.values());
 
-    // === AI 自动补充 Non-HSK 词汇释义 ===
-    // 找出所有缺少释义的词（优先处理 Non-HSK，也处理其他缺失释义的词）
+    // === 自动补充词汇释义（使用本地 pinyin-pro 与 CEDICT 词典） ===
+    // 找出所有缺少释义的词（包含拼音或英文缺失）
     const missingWords = vocabulary.filter(v => !v.pinyin || !v.en);
     
-    if (missingWords.length > 0 && getBaiduConfig()?.appId && getBaiduConfig()?.appKey) {
+    if (missingWords.length > 0) {
         try {
-            if (onProgress) onProgress(`🤖 正在用 AI 生成 ${missingWords.length} 个词的拼音和释义...`);
+            if (onProgress) onProgress(`🤖 正在自动生成 ${missingWords.length} 个词的拼音和释义...`);
             
             const aiDefs = await generateDefinitionsForWords(missingWords.map(v => v.word));
             

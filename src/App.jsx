@@ -26,6 +26,7 @@ function App() {
                                     <Route path="/read/:id" element={<ReadingPage />} />
                                     <Route path="/vocabulary" element={<VocabularyPage />} />
                                     <Route path="/teacher" element={<TeacherPage />} />
+                                    <Route path="/my-articles" element={<TeacherPage />} />
                                     <Route path="/auth" element={<AuthPage />} />
                                     <Route path="/profile" element={<ProfilePage />} />
                                     <Route path="/admin" element={<AdminPage />} />

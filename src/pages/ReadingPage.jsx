@@ -33,7 +33,7 @@ function ReadingPage() {
 
             // 记录用户已读文章历史
             if (currentUser?.id) {
-                setDoc(doc(db, 'users', currentUser.id, 'readArticles', article.id), {
+                setDoc(doc(db, 'users', currentUser.id, 'readArticles', String(article.id)), {
                     readAt: Date.now(),
                     title: article.title_cn || ''
                 }, { merge: true }).catch(err => console.warn('记录阅读历史失败:', err));
@@ -67,7 +67,7 @@ function ReadingPage() {
         // 纯文本形式的文章内容（去除 HTML 标签以精准计算位置）
         const textOnly = article.content.replace(/<[^>]+>/g, '');
         
-        return [...article.vocabulary].sort((a, b) => {
+        return [...(article.vocabulary || [])].sort((a, b) => {
             const posA = textOnly.indexOf(a.word);
             const posB = textOnly.indexOf(b.word);
             // 如果都找到，按出现先后；找不到的靠后

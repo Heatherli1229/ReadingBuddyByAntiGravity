@@ -24,12 +24,18 @@ function Navbar() {
 
                     {isAuthenticated ? (
                         <>
-                        {currentUser.role === 'student' && (
-                                <Link to="/vocabulary" className={`navbar-link vocab-link ${active('/vocabulary')}`}>
-                                    <span className="vocab-icon">📝</span>
-                                    <span>我的生词本</span>
-                                    {wordCount > 0 && <span className="vocab-count">{wordCount}</span>}
-                                </Link>
+                            {currentUser.role === 'student' && (
+                                <>
+                                    <Link to="/vocabulary" className={`navbar-link vocab-link ${active('/vocabulary')}`}>
+                                        <span className="vocab-icon">📝</span>
+                                        <span>我的生词本</span>
+                                        {wordCount > 0 && <span className="vocab-count">{wordCount}</span>}
+                                    </Link>
+                                    <Link to="/my-articles" className={`navbar-link ${active('/my-articles')}`}>
+                                        <span className="teacher-icon">✍️</span>
+                                        <span>我的上传</span>
+                                    </Link>
+                                </>
                             )}
 
                             {currentUser.role === 'teacher' && (
