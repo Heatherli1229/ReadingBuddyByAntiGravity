@@ -126,7 +126,11 @@ export function AuthProvider({ children }) {
             return { success: false, error: '请输入有效的邮箱地址' };
         }
         try {
-            await sendPasswordResetEmail(auth, email);
+            const actionCodeSettings = {
+                url: window.location.origin + '/auth',
+                handleCodeInApp: true,
+            };
+            await sendPasswordResetEmail(auth, email, actionCodeSettings);
             return { success: true };
         } catch (error) {
             let msg = '发送失败，请检查邮箱是否正确';

@@ -21,12 +21,12 @@ function AuthPage() {
     const { login, register, resetPassword, handleConfirmPasswordReset, isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
 
-    // 监听邮件链接重置密码模式
+    // 监听邮件链接重置密码模式（包含 oobCode 参数即表示用户点击了邮件链接）
     useEffect(() => {
-        if (queryMode === 'resetPassword' && oobCode) {
+        if (oobCode) {
             setMode('resetPassword');
         }
-    }, [queryMode, oobCode]);
+    }, [oobCode]);
 
     useEffect(() => {
         if (isAuthenticated) {
